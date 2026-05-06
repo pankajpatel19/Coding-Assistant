@@ -6,6 +6,7 @@ import { retrieveCode } from "../services/retriever.service.js";
 
 let cacheRepo = null;
 let cacheChunks = null;
+let conversationHistory = [];
 
 const indexRepo = async (req, res) => {
   try {
@@ -19,6 +20,8 @@ const indexRepo = async (req, res) => {
     const totalChunks = chunks.length;
     cacheRepo = `${owner}/${repo}`;
     cacheChunks = chunks;
+
+    conversationHistory = [];
 
     return res.status(200).json({
       success: true,
@@ -55,9 +58,11 @@ const askedQuestion = async (req, res) => {
     const context = retriverChunks
       .map((chunk) => `// File: ${chunk.filePath}\n${chunk.content}`)
       .join("\n\n");
+    conversationHistory.push({ role: "user", question, context });
 
-    const answer = await invokeBedrock(question, context);
+    const answer = await invokeBedrock(conversationHistory);
 
+    conversationHistory.push({ role: "assistant", answer });
     return res.status(200).json({
       success: true,
       message: "Question answered successfully",
@@ -72,4 +77,20 @@ const askedQuestion = async (req, res) => {
   }
 };
 
-export { indexRepo, askedQuestion };
+const clearHistory = async (req, res) => {
+  try {
+    conversationHistory = [];
+    return res.status(200).json({
+      success: true,
+      message: "History cleared successfully",
+    });
+  } catch (error) {
+    console.error("Error during clearing history:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to clear history",
+    });
+  }
+};
+
+export { indexRepo, askedQuestion, clearHistory };

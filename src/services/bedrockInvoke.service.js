@@ -90,8 +90,15 @@ If the user asks a follow-up question, use the previous conversation and context
     const res = await client.send(command);
     const result = JSON.parse(Buffer.from(res.body).toString("utf-8"));
 
-    // Extracting the structured JSON output from the tool use
-    return result.output.message.content[0].toolUse.input;
+    const toolUseBlock = result.output.message.content.find((c) => c.toolUse);
+    if (toolUseBlock) {
+      return toolUseBlock.toolUse.input;
+    }
+
+    return {
+      answer: result.output.message.content.map((c) => c.text).join(""),
+      files_referenced: [],
+    };
   } catch (error) {
     console.error("Bedrock Invoke Error:", error);
     throw error;

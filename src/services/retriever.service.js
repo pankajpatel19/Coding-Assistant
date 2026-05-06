@@ -43,6 +43,26 @@ const stopWords = new Set([
   "implemented",
 ]);
 
+const cosineSimilarity = (vecA, vecB) => {
+  const dotProduct = vecA.reduce((acc, val, i) => acc + val * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((acc, val) => acc + val * val, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((acc, val) => acc + val * val, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+};
+
+const retrieveSementicChunks = async (
+  questionEmbedding,
+  embeddingChunks,
+  topK = 5,
+) => {
+  const scored = embeddingChunks.map((chunk) => {
+    const score = cosineSimilarity(questionEmbedding, chunk.embedding);
+    return { ...chunk, score };
+  });
+
+  return scored.sort((a, b) => b.score - a.score).slice(0, topK);
+};
+
 const retrieveCode = async (question, chunks, topK = 5) => {
   const words = question
     .toLowerCase()
@@ -69,7 +89,7 @@ const retrieveCode = async (question, chunks, topK = 5) => {
       return acc;
     }, 0);
 
-    return { chunk, score };
+    return { ...chunk, score };
   });
 
   const filteredChunks = scored
@@ -78,4 +98,4 @@ const retrieveCode = async (question, chunks, topK = 5) => {
   return filteredChunks.slice(0, topK).map((item) => item.chunk);
 };
 
-export { retrieveCode };
+export { retrieveCode, retrieveSementicChunks };

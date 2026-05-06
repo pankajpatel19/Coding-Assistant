@@ -1,12 +1,17 @@
 import { parseRepoUrl } from "../helper/parseData.js";
 import { invokeBedrock } from "../services/bedrockInvoke.service.js";
 import { buildChunk } from "../services/chunkers.service.js";
+import { getEmbeddings, getEmbedding } from "../services/embeding.service.js";
 import { getFileContent, getRepoFiles } from "../services/github.service.js";
-import { retrieveCode } from "../services/retriever.service.js";
+import {
+  retrieveCode,
+  retrieveSementicChunks,
+} from "../services/retriever.service.js";
 
 let cacheRepo = null;
 let cacheChunks = null;
 let conversationHistory = [];
+let embeddingChunks = [];
 
 const indexRepo = async (req, res) => {
   try {
@@ -17,6 +22,10 @@ const indexRepo = async (req, res) => {
     const { owner, repo } = parseRepoUrl(repoUrl);
 
     const chunks = await buildChunk(owner, repo, getRepoFiles, getFileContent);
+
+    const embededChunks = await getEmbeddings(chunks);
+
+    embeddingChunks = embededChunks;
     const totalChunks = chunks.length;
     cacheRepo = `${owner}/${repo}`;
     cacheChunks = chunks;
@@ -25,7 +34,7 @@ const indexRepo = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Repo indexed successfully",
+      message: "Repo indexed with embeddings",
       cacheRepo,
       totalChunks,
     });
@@ -40,7 +49,7 @@ const indexRepo = async (req, res) => {
 
 const askedQuestion = async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, mode = "semantic" } = req.body;
     if (!question) {
       return res.status(400).json({ message: "Question is required" });
     }
@@ -48,14 +57,19 @@ const askedQuestion = async (req, res) => {
     if (!cacheRepo || cacheChunks.length === 0) {
       return res.status(400).json({ message: "No repo indexed" });
     }
+    let relevent = [];
+    if (mode === "semantic") {
+      const embedding = await getEmbedding(question);
+      relevent = await retrieveSementicChunks(embedding, embeddingChunks);
+    } else {
+      relevent = await retrieveCode(question, cacheChunks);
+    }
 
-    const retriverChunks = await retrieveCode(question, cacheChunks);
-
-    if (retriverChunks.length === 0) {
+    if (relevent.length === 0) {
       return res.status(404).json({ message: "No matching chunks found" });
     }
 
-    const context = retriverChunks
+    const context = relevent
       .map((chunk) => `// File: ${chunk.filePath}\n${chunk.content}`)
       .join("\n\n");
     conversationHistory.push({ role: "user", question, context });
@@ -63,6 +77,9 @@ const askedQuestion = async (req, res) => {
     const answer = await invokeBedrock(conversationHistory);
 
     conversationHistory.push({ role: "assistant", answer });
+    if (conversationHistory.length > 10) {
+      conversationHistory.shift();
+    }
     return res.status(200).json({
       success: true,
       message: "Question answered successfully",

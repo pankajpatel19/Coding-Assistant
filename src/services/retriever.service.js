@@ -95,7 +95,8 @@ const retrieveCode = async (question, chunks, topK = 5) => {
   const filteredChunks = scored
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
-  return filteredChunks.slice(0, topK).map((item) => item.chunk);
+
+  return filteredChunks.slice(0, topK).map(({ score, ...chunk }) => chunk);
 };
 
 export { retrieveCode, retrieveSementicChunks };

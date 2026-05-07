@@ -35,7 +35,7 @@ async function invokeBedrock(history) {
         text: `You are an expert AI software engineer. 
 You help developers understand codebases by answering questions based on the provided code context.
 If the answer is not in the context, say 'I cannot find the answer in the provided code.' Do not guess.
-If the user asks a follow-up question, use the previous conversation and context to formulate your answer.`,
+If the user asks a follow-up question, use the previous conversation and context to formulate your answer.You MUST always use the 'CodeAnswer' tool to respond.`,
       },
     ],
     inferenceConfig: {
@@ -94,6 +94,7 @@ If the user asks a follow-up question, use the previous conversation and context
     if (toolUseBlock) {
       return toolUseBlock.toolUse.input;
     }
+    console.log(JSON.stringify(result.output.message.content, null, 2));
 
     return {
       answer: result.output.message.content.map((c) => c.text).join(""),

@@ -3,10 +3,13 @@ import { invokeBedrock } from "../services/bedrockInvoke.service.js";
 import { buildChunk } from "../services/chunkers.service.js";
 import { getEmbeddings, getEmbedding } from "../services/embeding.service.js";
 import { getFileContent, getRepoFiles } from "../services/github.service.js";
+import { retrieveCode } from "../services/retriever.service.js";
 import {
-  retrieveCode,
-  retrieveSementicChunks,
-} from "../services/retriever.service.js";
+  isIndexed,
+  saveChunks,
+  searchChunks,
+  clearTable,
+} from "../services/vectordb.service.js";
 
 let cacheRepo = null;
 let cacheChunks = null;
@@ -15,24 +18,41 @@ let embeddingChunks = [];
 
 const indexRepo = async (req, res) => {
   try {
-    const { repoUrl } = req.body;
+    const { repoUrl, force = false } = req.body;
     if (!repoUrl) {
       return res.status(400).json({ message: "Repo url is required" });
     }
     const { owner, repo } = parseRepoUrl(repoUrl);
 
+    const alreadyIndexed = await isIndexed(repoUrl);
+
+    if (!force && alreadyIndexed) {
+      cacheRepo = `${owner}/${repo}`;
+      return res.status(200).json({
+        success: true,
+        repo: repoUrl,
+        message: "Repo is already indexed Use force to index again",
+      });
+    }
+
+    if (force && alreadyIndexed) {
+      console.log("clearing cache");
+      await clearTable();
+    }
+
     const chunks = await buildChunk(owner, repo, getRepoFiles, getFileContent);
 
     const embededChunks = await getEmbeddings(chunks);
 
+    await saveChunks(embededChunks);
+
     embeddingChunks = embededChunks;
-    const totalChunks = chunks.length;
     cacheRepo = `${owner}/${repo}`;
     cacheChunks = chunks;
-
+    const totalChunks = chunks.length;
     conversationHistory = [];
 
-    return res.status(200).json({
+    return res.status(201).json({
       success: true,
       message: "Repo indexed with embeddings",
       cacheRepo,
@@ -54,13 +74,13 @@ const askedQuestion = async (req, res) => {
       return res.status(400).json({ message: "Question is required" });
     }
 
-    if (!cacheRepo || cacheChunks.length === 0) {
+    if (!cacheRepo || cacheChunks?.length === 0) {
       return res.status(400).json({ message: "No repo indexed" });
     }
     let relevent = [];
     if (mode === "semantic") {
       const embedding = await getEmbedding(question);
-      relevent = await retrieveSementicChunks(embedding, embeddingChunks);
+      relevent = await searchChunks(embedding);
     } else {
       relevent = await retrieveCode(question, cacheChunks);
     }
@@ -77,8 +97,9 @@ const askedQuestion = async (req, res) => {
     const answer = await invokeBedrock(conversationHistory);
 
     conversationHistory.push({ role: "assistant", answer });
+
     if (conversationHistory.length > 10) {
-      conversationHistory.shift();
+      conversationHistory = conversationHistory.slice(-10);
     }
     return res.status(200).json({
       success: true,

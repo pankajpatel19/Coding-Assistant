@@ -11,10 +11,26 @@ import {
   clearTable,
 } from "../services/vectordb.service.js";
 
-let cacheRepo = null;
-let cacheChunks = null;
-let conversationHistory = [];
-let embeddingChunks = [];
+// Session-based storage: replaces global state for multi-user scalability.
+// For production, replace this Map with Redis or a database-backed store.
+const sessions = new Map();
+
+const getSession = (req) => {
+  const sessionId =
+    req.headers["x-session-id"] ||
+    req.body.sessionId ||
+    req.ip ||
+    "default-session";
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, {
+      cacheRepo: null,
+      cacheChunks: null,
+      conversationHistory: [],
+      embeddingChunks: [],
+    });
+  }
+  return { sessionId, state: sessions.get(sessionId) };
+};
 
 const indexRepo = async (req, res) => {
   try {
@@ -23,11 +39,12 @@ const indexRepo = async (req, res) => {
       return res.status(400).json({ message: "Repo url is required" });
     }
     const { owner, repo } = parseRepoUrl(repoUrl);
+    const { state } = getSession(req);
 
     const alreadyIndexed = await isIndexed(repoUrl);
 
     if (!force && alreadyIndexed) {
-      cacheRepo = `${owner}/${repo}`;
+      state.cacheRepo = `${owner}/${repo}`;
       return res.status(200).json({
         success: true,
         repo: repoUrl,
@@ -46,16 +63,16 @@ const indexRepo = async (req, res) => {
 
     await saveChunks(embededChunks);
 
-    embeddingChunks = embededChunks;
-    cacheRepo = `${owner}/${repo}`;
-    cacheChunks = chunks;
+    state.embeddingChunks = embededChunks;
+    state.cacheRepo = `${owner}/${repo}`;
+    state.cacheChunks = chunks;
     const totalChunks = chunks.length;
-    conversationHistory = [];
+    state.conversationHistory = [];
 
     return res.status(201).json({
       success: true,
       message: "Repo indexed with embeddings",
-      cacheRepo,
+      cacheRepo: state.cacheRepo,
       totalChunks,
     });
   } catch (error) {
@@ -70,19 +87,22 @@ const indexRepo = async (req, res) => {
 const askedQuestion = async (req, res) => {
   try {
     const { question, mode = "semantic" } = req.body;
+    const { state } = getSession(req);
+
     if (!question) {
       return res.status(400).json({ message: "Question is required" });
     }
 
-    if (!cacheRepo || cacheChunks?.length === 0) {
+    if (!state.cacheRepo || state.cacheChunks?.length === 0) {
       return res.status(400).json({ message: "No repo indexed" });
     }
+
     let relevent = [];
     if (mode === "semantic") {
       const embedding = await getEmbedding(question);
       relevent = await searchChunks(embedding);
     } else {
-      relevent = await retrieveCode(question, cacheChunks);
+      relevent = await retrieveCode(question, state.cacheChunks);
     }
 
     if (relevent.length === 0) {
@@ -92,15 +112,16 @@ const askedQuestion = async (req, res) => {
     const context = relevent
       .map((chunk) => `// File: ${chunk.filePath}\n${chunk.content}`)
       .join("\n\n");
-    conversationHistory.push({ role: "user", question, context });
+    state.conversationHistory.push({ role: "user", question, context });
 
-    const answer = await invokeBedrock(conversationHistory);
+    const answer = await invokeBedrock(state.conversationHistory);
 
-    conversationHistory.push({ role: "assistant", answer });
+    state.conversationHistory.push({ role: "assistant", answer });
 
-    if (conversationHistory.length > 10) {
-      conversationHistory = conversationHistory.slice(-10);
+    if (state.conversationHistory.length > 10) {
+      state.conversationHistory = state.conversationHistory.slice(-10);
     }
+
     return res.status(200).json({
       success: true,
       message: "Question answered successfully",
@@ -117,7 +138,8 @@ const askedQuestion = async (req, res) => {
 
 const clearHistory = async (req, res) => {
   try {
-    conversationHistory = [];
+    const { state } = getSession(req);
+    state.conversationHistory = [];
     return res.status(200).json({
       success: true,
       message: "History cleared successfully",

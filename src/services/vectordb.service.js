@@ -25,6 +25,8 @@ const saveChunks = async (chunks) => {
       id: `${idx}-${chunk.filePath}`,
       filePath: chunk.filePath,
       content: chunk.content,
+      language: chunk.language || "generic",
+      repo: chunk.repo || "",
       vector: chunk.embedding,
     }));
     const tableNames = await db.tableNames();
@@ -41,7 +43,7 @@ const saveChunks = async (chunks) => {
   }
 };
 
-const searchChunks = async (embedding, k = 5) => {
+const searchChunks = async (embedding, repo = null, k = 5) => {
   try {
     const db = await ConnectDB();
 
@@ -50,14 +52,23 @@ const searchChunks = async (embedding, k = 5) => {
       if (!tableNames.includes(TABLE_NAME)) {
         throw new Error("index your repo first");
       }
-
       table = await db.openTable(TABLE_NAME);
     }
-    const result = await table.search(embedding).limit(k).execute();
+
+    let query = table.search(embedding).limit(k);
+
+    // Filter to only return chunks from the current repo (prevents cross-repo contamination)
+    if (repo) {
+      query = query.where(`repo = '${repo.replace(/'/g, "''")}'`);
+    }
+
+    const result = await query.execute();
 
     return result.map((r) => ({
       filePath: r.filePath,
       content: r.content,
+      language: r.language,
+      repo: r.repo,
     }));
   } catch (error) {
     console.error("Error searching chunks:", error);

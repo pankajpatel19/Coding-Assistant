@@ -26,10 +26,66 @@ const getSession = (req) => {
       cacheRepo: null,
       cacheChunks: null,
       conversationHistory: [],
+      historySummary: null,   // rolling summary of older turns
       embeddingChunks: [],
     });
   }
   return { sessionId, state: sessions.get(sessionId) };
+};
+
+/**
+ * Keyword-based reranker: boosts chunks whose filePath contains a keyword
+ * extracted from the question (e.g. "auth" in question → auth.service.js scores higher).
+ * Returns chunks sorted by descending boosted score.
+ */
+const rerankChunks = (chunks, question) => {
+  // Extract meaningful lowercase words (>= 3 chars, ignore common stop words)
+  const stopWords = new Set(["the", "and", "for", "what", "how", "does", "this", "that", "are", "was"]);
+  const keywords = question
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 3 && !stopWords.has(w));
+
+  return chunks
+    .map((chunk) => {
+      const pathLower = chunk.filePath.toLowerCase();
+      const contentLower = chunk.content.toLowerCase();
+      let score = 0;
+      for (const kw of keywords) {
+        if (pathLower.includes(kw)) score += 2;       // filepath match is stronger signal
+        if (contentLower.includes(kw)) score += 1;   // content match adds extra weight
+      }
+      return { ...chunk, _score: score };
+    })
+    .sort((a, b) => b._score - a._score);
+};
+
+/**
+ * Trims conversation history to last MAX_VERBATIM Q&A pairs.
+ * Summarises the older tail into a single system-style message to preserve
+ * high-level context without blowing the token budget.
+ */
+const MAX_VERBATIM_PAIRS = 3;
+const trimHistory = (history, summary) => {
+  const VERBATIM_ENTRIES = MAX_VERBATIM_PAIRS * 2; // each pair = user + assistant
+  if (history.length <= VERBATIM_ENTRIES) {
+    return { trimmed: history, newSummary: summary };
+  }
+
+  const older = history.slice(0, history.length - VERBATIM_ENTRIES);
+  const recent = history.slice(history.length - VERBATIM_ENTRIES);
+
+  // Build a short textual summary of the older turns
+  const olderSummary = older
+    .filter((e) => e.role === "user")
+    .map((e) => e.question)
+    .join("; ");
+  const combined = summary
+    ? `${summary} | ${olderSummary}`
+    : olderSummary;
+
+  return { trimmed: recent, newSummary: combined };
 };
 
 const indexRepo = async (req, res) => {
@@ -100,7 +156,8 @@ const askedQuestion = async (req, res) => {
     let relevent = [];
     if (mode === "semantic") {
       const embedding = await getEmbedding(question);
-      relevent = await searchChunks(embedding);
+      // Pass repo so search is scoped to the currently indexed repository
+      relevent = await searchChunks(embedding, state.cacheRepo);
     } else {
       relevent = await retrieveCode(question, state.cacheChunks);
     }
@@ -109,18 +166,29 @@ const askedQuestion = async (req, res) => {
       return res.status(404).json({ message: "No matching chunks found" });
     }
 
-    const context = relevent
+    // Keyword-based reranking: boost files whose path/content match question keywords
+    const reranked = rerankChunks(relevent, question);
+
+    const context = reranked
       .map((chunk) => `// File: ${chunk.filePath}\n${chunk.content}`)
       .join("\n\n");
+
+    // Build history to send to Bedrock — prepend rolling summary if one exists
+    const historyToSend = state.historySummary
+      ? [{ role: "user", question: `[Context from earlier turns]: ${state.historySummary}`, context: "" }, ...state.conversationHistory]
+      : [...state.conversationHistory];
+
+    historyToSend.push({ role: "user", question, context });
+
+    const answer = await invokeBedrock(historyToSend);
+
+    // Update session history and trim if needed
     state.conversationHistory.push({ role: "user", question, context });
-
-    const answer = await invokeBedrock(state.conversationHistory);
-
     state.conversationHistory.push({ role: "assistant", answer });
 
-    if (state.conversationHistory.length > 10) {
-      state.conversationHistory = state.conversationHistory.slice(-10);
-    }
+    const { trimmed, newSummary } = trimHistory(state.conversationHistory, state.historySummary);
+    state.conversationHistory = trimmed;
+    state.historySummary = newSummary;
 
     return res.status(200).json({
       success: true,

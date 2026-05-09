@@ -54,17 +54,30 @@ async function getRepoFiles(owner, repo) {
       ".exs",
     ];
 
-    const excludeFiles = [
-      "package-lock.json",
-      "yarn.lock",
-      "pnpm-lock.yaml",
+    const excludeFiles = ["package-lock.json", "yarn.lock", "pnpm-lock.yaml"];
+
+    const excludeDirs = [
+      "node_modules",
+      "dist",
+      "build",
+      "coverage",
+      ".git",
+      ".next",
+      "out",
+      "target",
+      "__pycache__",
+      ".cache",
+      ".parcel-cache",
+      "vendor",
+      "bin",
+      "obj",
     ];
 
     const files = data.tree.filter((file) => {
       if (file.type !== "blob") return false;
-      
       if (excludeFiles.some((ex) => file.path.endsWith(ex))) return false;
-      if (file.path.includes("node_modules")) return false;
+      if (excludeDirs.some((dir) => file.path.split("/").includes(dir)))
+        return false;
 
       return codeExt.some((ext) => file.path.endsWith(ext));
     });

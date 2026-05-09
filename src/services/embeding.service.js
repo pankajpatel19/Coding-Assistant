@@ -24,15 +24,22 @@ async function getEmbedding(text) {
   }
 }
 
-const getEmbeddings = async (chunks) => {
+const getEmbeddings = async (chunks, batchSize = 10) => {
   try {
     const embeddings = [];
-    for (const chunk of chunks) {
-      const embedding = await getEmbedding(chunk.content);
-      embeddings.push({
-        ...chunk,
-        embedding,
+    // Process chunks in parallel batches to respect rate limits while improving speed
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const batch = chunks.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (chunk) => {
+        const embedding = await getEmbedding(chunk.content);
+        return {
+          ...chunk,
+          embedding,
+        };
       });
+      
+      const batchResults = await Promise.all(batchPromises);
+      embeddings.push(...batchResults);
     }
     return embeddings;
   } catch (error) {

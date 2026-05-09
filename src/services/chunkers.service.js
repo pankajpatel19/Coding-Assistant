@@ -26,7 +26,13 @@ const detectLanguage = (filePath) => {
 };
 
 // Chunk JS/TS by top-level function and class declarations
-const chunkByJSBoundaries = (lines, filePath, language, repo, maxChunkSize = 1500) => {
+const chunkByJSBoundaries = (
+  lines,
+  filePath,
+  language,
+  repo,
+  maxChunkSize = 1500,
+) => {
   const chunks = [];
   // Patterns that signal the start of a new logical unit
   const boundaryRe =
@@ -37,7 +43,12 @@ const chunkByJSBoundaries = (lines, filePath, language, repo, maxChunkSize = 150
 
   const pushChunk = () => {
     if (currentChunk.length > 0) {
-      chunks.push({ filePath, content: currentChunk.join("\n"), language, repo });
+      chunks.push({
+        filePath,
+        content: currentChunk.join("\n"),
+        language,
+        repo,
+      });
       currentChunk = [];
       currentLength = 0;
     }
@@ -65,7 +76,13 @@ const chunkByJSBoundaries = (lines, filePath, language, repo, maxChunkSize = 150
 };
 
 // Chunk Python by def/class boundaries
-const chunkByPythonBoundaries = (lines, filePath, language, repo, maxChunkSize = 1500) => {
+const chunkByPythonBoundaries = (
+  lines,
+  filePath,
+  language,
+  repo,
+  maxChunkSize = 1500,
+) => {
   const chunks = [];
   const boundaryRe = /^(def |class |async def )/;
 
@@ -74,7 +91,12 @@ const chunkByPythonBoundaries = (lines, filePath, language, repo, maxChunkSize =
 
   const pushChunk = () => {
     if (currentChunk.length > 0) {
-      chunks.push({ filePath, content: currentChunk.join("\n"), language, repo });
+      chunks.push({
+        filePath,
+        content: currentChunk.join("\n"),
+        language,
+        repo,
+      });
       currentChunk = [];
       currentLength = 0;
     }
@@ -100,7 +122,13 @@ const chunkByPythonBoundaries = (lines, filePath, language, repo, maxChunkSize =
 };
 
 // Chunk Java/Kotlin by method/class boundaries
-const chunkByJavaBoundaries = (lines, filePath, language, repo, maxChunkSize = 1500) => {
+const chunkByJavaBoundaries = (
+  lines,
+  filePath,
+  language,
+  repo,
+  maxChunkSize = 1500,
+) => {
   const chunks = [];
   const boundaryRe =
     /^\s*(public|private|protected|static|final|abstract|override|fun |class |interface |@Override)/;
@@ -110,7 +138,12 @@ const chunkByJavaBoundaries = (lines, filePath, language, repo, maxChunkSize = 1
 
   const pushChunk = () => {
     if (currentChunk.length > 0) {
-      chunks.push({ filePath, content: currentChunk.join("\n"), language, repo });
+      chunks.push({
+        filePath,
+        content: currentChunk.join("\n"),
+        language,
+        repo,
+      });
       currentChunk = [];
       currentLength = 0;
     }
@@ -136,7 +169,14 @@ const chunkByJavaBoundaries = (lines, filePath, language, repo, maxChunkSize = 1
 };
 
 // Generic character-based chunker with overlap (for all other languages)
-const chunkFile = (content, maxChunkSize = 1000, overlap = 200, filePath, language = "generic", repo = "") => {
+const chunkFile = (
+  content,
+  maxChunkSize = 1000,
+  overlap = 200,
+  filePath,
+  language = "generic",
+  repo = "",
+) => {
   const chunks = [];
   const lines = content.split("\n");
 
@@ -148,7 +188,12 @@ const chunkFile = (content, maxChunkSize = 1000, overlap = 200, filePath, langua
     const lineLength = line.length + 1;
 
     if (currentLength + lineLength > maxChunkSize && currentChunk.length > 0) {
-      chunks.push({ filePath, content: currentChunk.join("\n"), language, repo });
+      chunks.push({
+        filePath,
+        content: currentChunk.join("\n"),
+        language,
+        repo,
+      });
 
       let overlapLength = 0;
       let overlapLines = [];

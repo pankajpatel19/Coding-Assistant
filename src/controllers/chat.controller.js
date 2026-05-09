@@ -26,21 +26,26 @@ const getSession = (req) => {
       cacheRepo: null,
       cacheChunks: null,
       conversationHistory: [],
-      historySummary: null,   // rolling summary of older turns
+      historySummary: null, // rolling summary of older turns
       embeddingChunks: [],
     });
   }
   return { sessionId, state: sessions.get(sessionId) };
 };
 
-/**
- * Keyword-based reranker: boosts chunks whose filePath contains a keyword
- * extracted from the question (e.g. "auth" in question → auth.service.js scores higher).
- * Returns chunks sorted by descending boosted score.
- */
 const rerankChunks = (chunks, question) => {
-  // Extract meaningful lowercase words (>= 3 chars, ignore common stop words)
-  const stopWords = new Set(["the", "and", "for", "what", "how", "does", "this", "that", "are", "was"]);
+  const stopWords = new Set([
+    "the",
+    "and",
+    "for",
+    "what",
+    "how",
+    "does",
+    "this",
+    "that",
+    "are",
+    "was",
+  ]);
   const keywords = question
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
@@ -53,22 +58,16 @@ const rerankChunks = (chunks, question) => {
       const contentLower = chunk.content.toLowerCase();
       let score = 0;
       for (const kw of keywords) {
-        if (pathLower.includes(kw)) score += 2;       // filepath match is stronger signal
-        if (contentLower.includes(kw)) score += 1;   // content match adds extra weight
+        if (pathLower.includes(kw)) score += 2;
+        if (contentLower.includes(kw)) score += 1;
       }
       return { ...chunk, _score: score };
     })
     .sort((a, b) => b._score - a._score);
 };
-
-/**
- * Trims conversation history to last MAX_VERBATIM Q&A pairs.
- * Summarises the older tail into a single system-style message to preserve
- * high-level context without blowing the token budget.
- */
 const MAX_VERBATIM_PAIRS = 3;
 const trimHistory = (history, summary) => {
-  const VERBATIM_ENTRIES = MAX_VERBATIM_PAIRS * 2; // each pair = user + assistant
+  const VERBATIM_ENTRIES = MAX_VERBATIM_PAIRS * 2;
   if (history.length <= VERBATIM_ENTRIES) {
     return { trimmed: history, newSummary: summary };
   }
@@ -81,9 +80,7 @@ const trimHistory = (history, summary) => {
     .filter((e) => e.role === "user")
     .map((e) => e.question)
     .join("; ");
-  const combined = summary
-    ? `${summary} | ${olderSummary}`
-    : olderSummary;
+  const combined = summary ? `${summary} | ${olderSummary}` : olderSummary;
 
   return { trimmed: recent, newSummary: combined };
 };
@@ -175,18 +172,27 @@ const askedQuestion = async (req, res) => {
 
     // Build history to send to Bedrock — prepend rolling summary if one exists
     const historyToSend = state.historySummary
-      ? [{ role: "user", question: `[Context from earlier turns]: ${state.historySummary}`, context: "" }, ...state.conversationHistory]
+      ? [
+          {
+            role: "user",
+            question: `[Context from earlier turns]: ${state.historySummary}`,
+            context: "",
+          },
+          ...state.conversationHistory,
+        ]
       : [...state.conversationHistory];
 
     historyToSend.push({ role: "user", question, context });
 
     const answer = await invokeBedrock(historyToSend);
 
-    // Update session history and trim if needed
     state.conversationHistory.push({ role: "user", question, context });
     state.conversationHistory.push({ role: "assistant", answer });
 
-    const { trimmed, newSummary } = trimHistory(state.conversationHistory, state.historySummary);
+    const { trimmed, newSummary } = trimHistory(
+      state.conversationHistory,
+      state.historySummary,
+    );
     state.conversationHistory = trimmed;
     state.historySummary = newSummary;
 

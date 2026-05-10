@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState } from "react";
 import { useSession } from "../hooks/useSession";
 import { useIndexRepo } from "../hooks/useIndexRepo";
 import { useAskQuestion } from "../hooks/useAskQuestion";
@@ -9,6 +9,8 @@ const RagContext = createContext(null);
 
 export function RagProvider({ children }) {
   const { sessionId, reset: resetSessionId } = useSession();
+  const [draftQuestion, setDraftQuestion] = useState("");
+  const [draftSelectionVersion, setDraftSelectionVersion] = useState(0);
   const { 
     indexRepo, 
     isPending: isIndexing, 
@@ -42,7 +44,13 @@ export function RagProvider({ children }) {
   const fullReset = () => {
     resetSessionId();
     clearLocalHistory();
+    setDraftQuestion("");
     setIndexedRepo(null);
+  };
+
+  const selectDraftQuestion = (question) => {
+    setDraftQuestion(question);
+    setDraftSelectionVersion((version) => version + 1);
   };
 
   const value = {
@@ -61,6 +69,10 @@ export function RagProvider({ children }) {
       isAsking, 
       mode, 
       setMode, 
+      draftQuestion,
+      setDraftQuestion,
+      draftSelectionVersion,
+      selectDraftQuestion,
       clear: clearHistory,
       summary
     }

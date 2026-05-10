@@ -30,12 +30,14 @@ export function ChatFeed() {
             "How does Auth work?",
             "API routes?",
           ].map((q) => (
-            <div
+            <button
+              type="button"
               key={q}
+              onClick={() => chat.selectDraftQuestion(q)}
               className="px-3 py-1.5 rounded-full border border-border-dim text-[10px] text-txt-muted cursor-pointer hover:border-cyan-border hover:text-cyan transition-all"
             >
               {q}
-            </div>
+            </button>
           ))}
         </div>
       </div>

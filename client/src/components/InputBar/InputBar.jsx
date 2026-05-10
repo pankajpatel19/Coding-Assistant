@@ -1,15 +1,24 @@
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRag } from "../../context/RagContext";
 
 export function InputBar() {
   const { chat, indexing } = useRag();
-  const [input, setInput] = useState("");
+  const inputRef = useRef(null);
+  const input = chat.draftQuestion;
+
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea || textarea.disabled || !textarea.value) return;
+
+    textarea.focus();
+    textarea.select();
+  }, [chat.draftSelectionVersion]);
 
   const handleSend = (e) => {
     e.preventDefault();
     if (!input.trim() || chat.isAsking) return;
     chat.ask(input.trim());
-    setInput("");
+    chat.setDraftQuestion("");
   };
 
   return (
@@ -19,6 +28,7 @@ export function InputBar() {
         <form onSubmit={handleSend} className="flex items-end gap-2.5">
           <div className="relative flex-1">
             <textarea
+              ref={inputRef}
               rows={1}
               placeholder={
                 indexing.repo
@@ -27,7 +37,7 @@ export function InputBar() {
               }
               disabled={!indexing.repo || chat.isAsking}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => chat.setDraftQuestion(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();

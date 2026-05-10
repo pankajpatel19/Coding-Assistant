@@ -15,8 +15,8 @@ const CodeBlock = ({ language, value }) => {
   };
 
   return (
-    <div className="group/code relative my-6 rounded-2xl overflow-hidden border border-border shadow-2xl">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-void border-b border-border">
+    <div className="group/code relative my-4 sm:my-6 rounded-xl sm:rounded-2xl overflow-hidden border border-border shadow-2xl">
+      <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5 bg-void border-b border-border">
         <span className="text-[10px] font-bold font-mono text-txt-muted uppercase tracking-widest">
           {language || "code"}
         </span>
@@ -36,15 +36,15 @@ const CodeBlock = ({ language, value }) => {
           </svg>
         </button>
       </div>
-      <div className="text-[14px]">
+      <div className="text-[12px] sm:text-[14px]">
         <SyntaxHighlighter
           language={language}
           style={isDark ? atomDark : prism}
           customStyle={{
             margin: 0,
-            padding: "1.5rem",
+            padding: "1rem",
             background: isDark ? "transparent" : "#f8fafc",
-            fontSize: "14px",
+            fontSize: "inherit",
             lineHeight: "1.6",
           }}
         >
@@ -71,11 +71,9 @@ export function UserMessage({ text, timestamp }) {
 }
 
 export function AiMessage({ answer, files, timestamp }) {
-  const { isDark } = useTheme();
-
   return (
-    <div className="flex flex-col items-start gap-4 px-6 animate-fade-up self-start max-w-full w-full group">
-      <div className="flex items-center gap-3 text-[10px] font-mono">
+    <div className="flex flex-col items-start gap-2.5 sm:gap-4 px-3 sm:px-6 animate-fade-up self-start max-w-full w-full group">
+      <div className="flex items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-mono">
         <div className="flex items-center gap-2.5 text-cyan font-bold uppercase tracking-[0.2em]">
           <div className="w-1.5 h-1.5 rounded-full bg-cyan shadow-[0_0_10px_cyan]" />
           Assistant
@@ -84,11 +82,11 @@ export function AiMessage({ answer, files, timestamp }) {
         <span className="text-txt-muted/60">{fmt(timestamp)}</span>
       </div>
 
-      <div className="bg-surface/50 border border-border text-txt px-7 py-7 rounded-3xl rounded-tl-none text-[15.5px] leading-relaxed w-full shadow-sm relative overflow-hidden group-hover:border-cyan/20 transition-all duration-500">
-        <div className="prose prose-technical max-w-none prose-sm selection:bg-cyan/10">
+      <div className="bg-surface/50 border border-border text-txt px-4 py-4 sm:px-7 sm:py-7 rounded-2xl sm:rounded-3xl rounded-tl-none text-[13px] sm:text-[15.5px] leading-6 sm:leading-relaxed w-full shadow-sm relative overflow-hidden group-hover:border-cyan/20 transition-all duration-500">
+        <div className="prose prose-technical max-w-none prose-sm selection:bg-cyan/10 prose-p:my-2 sm:prose-p:my-3 prose-pre:my-3 sm:prose-pre:my-4">
           <ReactMarkdown
             components={{
-              code({ node, inline, className, children, ...props }) {
+              code({ inline, className, children, ...props }) {
                 const match = /language-(\w+)/.exec(className || "");
                 const lang = match ? match[1] : "";
                 const content = String(children).replace(/\n$/, "");
@@ -97,7 +95,7 @@ export function AiMessage({ answer, files, timestamp }) {
                   <CodeBlock language={lang} value={content} />
                 ) : (
                   <code
-                    className="bg-cyan/10 text-cyan font-semibold px-1.5 py-0.5 rounded text-[13.5px] font-mono"
+                    className="bg-cyan/10 text-cyan font-semibold px-1.5 py-0.5 rounded text-[12px] sm:text-[13.5px] font-mono"
                     {...props}
                   >
                     {children}

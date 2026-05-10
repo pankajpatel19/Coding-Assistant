@@ -1,142 +1,152 @@
-import { connect } from "vectordb";
-import path from "path";
+import { Pinecone } from "@pinecone-database/pinecone";
+import { PINECONE_INDEX_NAME, PINECONE_API_KEY } from "../utils/env.js";
 
-const DB_PATH = path.join(process.cwd(), ".lancedb");
-const TABLE_NAME = "code_embeddings";
-let db = null;
-let table = null;
+const INDEX_NAME = PINECONE_INDEX_NAME || "code-assistant-384";
+const VECTOR_DIMENSION = 384;
 
-async function ConnectDB() {
+let pinecone = null;
+let index = null;
+
+async function connectDB() {
   try {
-    if (!db) {
-      db = await connect(DB_PATH);
+    if (!pinecone) {
+      pinecone = new Pinecone({
+        apiKey: PINECONE_API_KEY || process.env.PINECONE_API_KEY,
+      });
+      index = pinecone.index(INDEX_NAME);
     }
-    return db;
+    return index;
   } catch (error) {
-    console.error("Error connecting to database:", error);
+    console.error("Error connecting to Pinecone:", error);
     throw error;
   }
 }
-const saveChunks = async (chunks) => {
+
+const saveChunks = async (chunks, repoUrl) => {
   try {
-    const db = await ConnectDB();
+    if (!chunks || chunks.length === 0) return true;
+    const index = await connectDB();
 
-    const record = chunks.map((chunk, idx) => ({
-      id: `${idx}-${chunk.filePath}`,
-      filePath: chunk.filePath,
-      content: chunk.content,
-      language: chunk.language || "generic",
-      repo: chunk.repo || "",
-      vector: chunk.embedding,
-    }));
-    const tableNames = await db.tableNames();
+    const records = chunks
+      .filter((c) => c.embedding && c.embedding.length === VECTOR_DIMENSION)
+      .map((chunk, idx) => ({
+        id: `${repoUrl}-${idx}-${Date.now()}`,
+        values: chunk.embedding,
+        metadata: {
+          filePath: chunk.filePath || "unknown",
+          content: String(chunk.content || ""),
+          language: chunk.language || "generic",
+          repo: repoUrl,
+        },
+      }));
 
-    if (!tableNames.includes(TABLE_NAME)) {
-      table = await db.createTable(TABLE_NAME, record);
-    } else {
-      table = await db.openTable(TABLE_NAME);
-      await table.add(record);
+    if (records.length === 0) {
+      throw new Error(
+        `No ${VECTOR_DIMENSION}-dimension embeddings were available to save.`,
+      );
     }
+
+    // Pinecone upsert limit handle karne ke liye batching
+    const batchSize = 100;
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize);
+      await index.upsert({ records: batch });
+    }
+
+    console.log(
+      `✅ ${records.length} Chunks saved successfully for ${repoUrl}`,
+    );
   } catch (error) {
-    console.error("Error saving chunks:", error);
+    console.error("Error saving chunks:", error.message);
     throw error;
   }
 };
 
-const searchChunks = async (embedding, repo = null, k = 12) => {
+const searchChunks = async (repoUrl, embedding, k = 12) => {
   try {
-    const db = await ConnectDB();
-
-    if (!table) {
-      const tableNames = await db.tableNames();
-      if (!tableNames.includes(TABLE_NAME)) {
-        throw new Error("index your repo first");
-      }
-      table = await db.openTable(TABLE_NAME);
+    if (!Array.isArray(embedding) || embedding.length !== VECTOR_DIMENSION) {
+      throw new Error(
+        `Search vector dimension must be ${VECTOR_DIMENSION}, received ${embedding?.length || 0}.`,
+      );
     }
 
-    let query = table.search(embedding).limit(k);
+    const index = await connectDB();
+    const result = await index.query({
+      vector: embedding,
+      topK: k,
+      includeMetadata: true,
+      filter: { repo: { $eq: repoUrl } },
+    });
 
-    // Filter to only return chunks from the current repo (prevents cross-repo contamination)
-    if (repo) {
-      query = query.where(`repo = '${repo.replace(/'/g, "''")}'`);
-    }
-
-    const result = await query.execute();
-
-    return result.map((r) => ({
-      filePath: r.filePath,
-      content: r.content,
-      language: r.language,
-      repo: r.repo,
+    return result.matches.map((match) => ({
+      filePath: match.metadata.filePath,
+      content: match.metadata.content,
+      language: match.metadata.language,
+      repo: match.metadata.repo,
+      score: match.score,
     }));
   } catch (error) {
-    console.error("Error searching chunks:", error);
+    console.error("Error searching chunks:", error.message);
     throw error;
   }
 };
 
-const getAllChunks = async (repo) => {
+const getAllChunks = async (repoUrl) => {
   try {
-    const db = await ConnectDB();
-    if (!table) {
-      const tableNames = await db.tableNames();
-      if (!tableNames.includes(TABLE_NAME)) return [];
-      table = await db.openTable(TABLE_NAME);
-    }
-    const result = await table.search().where(`repo = '${repo.replace(/'/g, "''")}'`).limit(5000).execute();
-    return result.map((r) => ({
-      filePath: r.filePath,
-      content: r.content,
-      language: r.language,
-      repo: r.repo,
+    const index = await connectDB();
+    const result = await index.query({
+      vector: new Array(VECTOR_DIMENSION).fill(0),
+      topK: 1000,
+      includeMetadata: true,
+      filter: { repo: { $eq: repoUrl } },
+    });
+
+    return result.matches.map((match) => ({
+      filePath: match.metadata.filePath,
+      content: match.metadata.content,
+      language: match.metadata.language,
+      repo: match.metadata.repo,
     }));
   } catch (error) {
-    console.error("Error getting all chunks:", error);
+    console.error("Error getting all chunks:", error.message);
     return [];
   }
 };
 
 const isIndexed = async (repoUrl) => {
   try {
-    const db = await ConnectDB();
-    const tableNames = await db.tableNames();
-    return tableNames.includes(TABLE_NAME);
+    const index = await connectDB();
+    const result = await index.query({
+      vector: new Array(VECTOR_DIMENSION).fill(0),
+      topK: 1,
+      filter: { repo: { $eq: repoUrl } },
+    });
+    return result.matches.length > 0;
   } catch (error) {
-    console.error("Error checking if indexed:", error);
-    throw error;
+    return false;
   }
 };
 
-const clearTable = async () => {
+const clearTable = async (repoUrl) => {
   try {
-    const db = await ConnectDB();
-    const tableNames = await db.tableNames();
-    if (tableNames.includes(TABLE_NAME)) {
-      await db.dropTable(TABLE_NAME);
-    }
-    table = null;
+    const index = await connectDB();
+    await index.deleteMany({ filter: { repo: { $eq: repoUrl } } });
+    console.log("Index cleared for repo:", repoUrl);
   } catch (error) {
-    console.error("Error clearing table:", error);
+    console.error("Error clearing index:", error.message);
     throw error;
   }
 };
 
 const getIndexedRepos = async () => {
-  try {
-    const db = await ConnectDB();
-    const tableNames = await db.tableNames();
-    if (!tableNames.includes(TABLE_NAME)) return [];
-
-    const table = await db.openTable(TABLE_NAME);
-    // Fetch all records but only keep unique repo URLs
-    const result = await table.search().limit(10000).execute();
-    const uniqueRepos = [...new Set(result.map((r) => r.repo).filter(Boolean))];
-    return uniqueRepos;
-  } catch (error) {
-    console.error("Error getting indexed repos:", error);
-    return [];
-  }
+  return []; // Simplified for now
 };
 
-export { isIndexed, searchChunks, saveChunks, clearTable, getAllChunks, getIndexedRepos };
+export {
+  isIndexed,
+  searchChunks,
+  saveChunks,
+  clearTable,
+  getAllChunks,
+  getIndexedRepos,
+};

@@ -6,6 +6,8 @@ export const AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY;
 export const AWS_SECRET_KEY = process.env.AWS_SECRET_KEY;
 export const PORT = process.env.PORT;
 export const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+export const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
+export const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
 
 export const checkEnv = () => {
   if (
@@ -13,7 +15,9 @@ export const checkEnv = () => {
     !AWS_REGION ||
     !AWS_ACCESS_KEY ||
     !AWS_SECRET_KEY ||
-    !GITHUB_TOKEN
+    !GITHUB_TOKEN ||
+    !PINECONE_API_KEY ||
+    !PINECONE_INDEX_NAME
   ) {
     throw new Error("Missing environment variables");
   }

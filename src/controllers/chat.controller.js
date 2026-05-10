@@ -100,10 +100,10 @@ const indexRepo = async (req, res) => {
     const alreadyIndexed = await isIndexed(repoUrl);
 
     if (!force && alreadyIndexed) {
-      state.cacheRepo = `${owner}/${repo}`;
+      state.cacheRepo = repoUrl;
       // RESTORE: Load chunks from LanceDB back into memory if session was lost
       if (!state.cacheChunks || state.cacheChunks.length === 0) {
-        console.log("Restoring session from LanceDB...");
+        console.log("Restoring session from Pinecone...");
         state.cacheChunks = await getAllChunks(state.cacheRepo);
       }
       return res.status(200).json({
@@ -115,17 +115,17 @@ const indexRepo = async (req, res) => {
 
     if (force && alreadyIndexed) {
       console.log("clearing cache");
-      await clearTable();
+      await clearTable(repoUrl);
     }
 
     const chunks = await buildChunk(owner, repo, getRepoFiles, getFileContent);
 
     const embededChunks = await getEmbeddings(chunks);
 
-    await saveChunks(embededChunks);
+    await saveChunks(embededChunks, repoUrl);
 
     state.embeddingChunks = embededChunks;
-    state.cacheRepo = `${owner}/${repo}`;
+    state.cacheRepo = repoUrl;
     state.cacheChunks = chunks;
     const totalChunks = chunks.length;
     state.conversationHistory = [];
@@ -171,7 +171,7 @@ const askedQuestion = async (req, res) => {
     if (mode === "semantic") {
       const embedding = await getEmbedding(question);
       // Pass repo so search is scoped to the currently indexed repository
-      relevent = await searchChunks(embedding, state.cacheRepo);
+      relevent = await searchChunks(state.cacheRepo, embedding);
     } else {
       relevent = await retrieveCode(question, state.cacheChunks);
     }

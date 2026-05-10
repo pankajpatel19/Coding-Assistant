@@ -1,83 +1,71 @@
 @import "tailwindcss";
 
-
 @theme {
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
 
-  /* Surfaces */
-  --color-void:     #07090e;
-  --color-base:     #0d1117;
-  --color-surface:  #111820;
-  --color-elevated: #161d27;
-  --color-overlay:  #1b2330;
-  --color-muted-hover: #1f2a38;
+  /* Industry Standard Noir Palette (from image) */
+  --color-void:     #05070a;
+  --color-base:     #080c10;
+  --color-surface:  #0b0f16;
+  --color-elevated: #0e141c;
+  --color-overlay:  #121a24;
 
   /* Borders */
-  --color-border:        #243042;
-  --color-border-dim:    #1e2835;
-  --color-border-bright: #2e3d55;
+  --color-border:        #161d28;
+  --color-border-dim:    #111821;
+  --color-border-bright: #1e2b3a;
+
+  /* Brand Colors */
+  --color-cyan:        #00d4aa;
+  --color-cyan-dim:    #00d4aa15;
+  --color-cyan-border: #00d4aa30;
+  --color-cyan-light:  #00f0c0;
 
   /* Text */
-  --color-txt:         #e2e8f0;
+  --color-txt:         #c8d4e0;
   --color-txt-soft:    #8b9ab0;
   --color-txt-muted:   #4a5568;
-  --color-txt-code:    #a8b8d0;
 
-  /* Cyan — primary accent */
-  --color-cyan:        #00d4aa;
-  --color-cyan-light:  #33ddb8;
-  --color-cyan-dim:    rgba(0,212,170,0.10);
-  --color-cyan-border: rgba(0,212,170,0.25);
-  --color-cyan-glow:   rgba(0,212,170,0.22);
-
-  /* Purple — AI accent */
-  --color-purple:        #7c6af7;
-  --color-purple-dim:    rgba(124,106,247,0.10);
-  --color-purple-border: rgba(124,106,247,0.25);
-
-  /* Status */
-  --color-ok:      #34d399;
-  --color-ok-dim:  rgba(52,211,153,0.10);
+  /* System */
   --color-err:     #f87171;
-  --color-err-dim: rgba(248,113,113,0.10);
-  --color-warn:    #fbbf24;
+  --color-err-dim: #f8717110;
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.9); }
+  }
+  --animate-pulse-dot: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* ── Reset ────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { height: 100%; width: 100%; overflow: hidden; }
-body { font-family: var(--font-sans); background: var(--color-void); color: var(--color-txt); -webkit-font-smoothing: antialiased; }
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-color: var(--color-border);
+  }
+  
+  body {
+    @apply bg-void text-txt antialiased selection:bg-cyan/20;
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+  }
 
-/* ── Scrollbar ────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--color-border-bright); border-radius: 9999px; }
-
-/* ── Selection ────────────────────────────────────── */
-::selection { background: var(--color-cyan-dim); color: var(--color-cyan); }
-
-/* ── Animations ───────────────────────────────────── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  /* Custom Scrollbar for Noir aesthetic */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-bright);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-txt-muted);
+  }
 }
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.35; }
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-@keyframes bounce-dot {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30% { transform: translateY(-4px); opacity: 1; }
-}
 
-/* ── Utility classes (used in JSX) ───────────────── */
-.animate-fade-up  { animation: fadeUp 0.2s ease; }
-.animate-pulse-dot { animation: pulse-glow 2s ease infinite; }
-.animate-spin-sm  { animation: spin 0.55s linear infinite; }
-.animate-blink    { animation: blink 1s step-end infinite; }
-.bounce-1 { animation: bounce-dot 1.2s ease infinite; }
-.bounce-2 { animation: bounce-dot 1.2s ease 0.2s infinite; }
-.bounce-3 { animation: bounce-dot 1.2s ease 0.4s infinite; }
+.glass-panel {
+  @apply bg-base/80 backdrop-blur-xl border border-border-bright/50;
+}

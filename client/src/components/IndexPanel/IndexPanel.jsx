@@ -25,58 +25,54 @@ export function IndexPanel() {
     : null;
 
   return (
-    <div className="flex flex-col gap-10 p-8 border-r border-border h-full bg-base overflow-y-auto w-80 flex-shrink-0 shadow-2xl relative z-30">
-      {/* Brand Header */}
-      <div className="flex items-center gap-4 group">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-cyan-dim border border-cyan-border text-cyan shadow-[0_0_25px_rgba(0,212,170,0.1)] group-hover:shadow-[0_0_35px_rgba(0,212,170,0.2)] transition-all duration-500">
-          <span className="text-2xl animate-pulse-slow">⬡</span>
-        </div>
-        <div>
-          <h1 className="font-bold text-txt text-lg leading-tight tracking-tight selection:bg-cyan/30">
-            Code RAG
-          </h1>
-          <p className="text-[10px] font-mono text-txt-soft mt-0.5 uppercase tracking-[0.2em] opacity-70">
-            Terminal Noir v1.0
-          </p>
+    <div className="flex flex-col h-full w-[280px] flex-shrink-0 bg-base border-r border-border/80 overflow-hidden">
+      {/* ── Brand Header ── */}
+      <div className="px-6 py-6 border-b border-border/50">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-cyan/10 border border-cyan/20 text-cyan text-xl flex-shrink-0">
+            ⬡
+          </div>
+          <div>
+            <h1 className="text-[15px] font-bold text-txt tracking-tight leading-tight">
+              Code RAG
+            </h1>
+            <p className="text-[10px] font-mono text-txt-soft tracking-[0.2em] uppercase mt-0.5 opacity-60">
+              Terminal Noir v1.0
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mx-[-2rem]" />
-
-      {/* Index Section */}
-      <div className="flex flex-col gap-8">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {/* ── Body ── */}
+      <div className="flex-1 flex flex-col px-6 py-6 gap-6 overflow-y-auto">
+        {/* Form Group */}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-3">
-            <label className="text-[11px] font-bold text-txt-muted uppercase tracking-[0.15em] ml-1 flex items-center justify-between">
-              <span>Connect Repository</span>
-              {isPending && (
-                <span className="text-cyan animate-pulse lowercase font-normal tracking-normal">
-                  Indexing...
-                </span>
-              )}
-            </label>
+            <span className="text-[10px] font-bold text-txt-muted uppercase tracking-[0.2em] ml-1">
+              Connect Repository
+            </span>
             <input
               type="text"
-              placeholder="owner/repo"
-              className="w-full bg-overlay border border-border text-txt rounded-xl px-4 py-3.5 text-sm font-mono focus:border-cyan/40 focus:ring-4 focus:ring-cyan/5 outline-none transition-all placeholder:text-txt-muted/30 shadow-inner"
+              placeholder="owner / repo"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={isPending}
+              className="w-full bg-elevated border border-border text-txt rounded-xl px-4 py-3 text-[13px] font-mono placeholder:text-txt-muted/40 outline-none focus:border-cyan/30 focus:ring-4 focus:ring-cyan/5 transition-all disabled:opacity-40"
             />
           </div>
 
-          <label className="flex items-center gap-3 cursor-pointer group ml-1 select-none">
-            <div className="relative flex items-center justify-center">
+          <label className="flex items-center gap-3 px-4 py-3 bg-surface border border-border rounded-xl cursor-pointer group select-none hover:border-border-bright transition-colors">
+            <div className="relative flex items-center justify-center flex-shrink-0">
               <input
                 type="checkbox"
-                className="peer h-5 w-5 cursor-pointer appearance-none rounded-lg border border-border bg-overlay checked:border-cyan checked:bg-cyan/20 transition-all"
+                className="peer h-5 w-5 cursor-pointer appearance-none rounded-lg border border-border bg-void checked:border-cyan checked:bg-cyan/20 transition-all"
                 checked={force}
                 onChange={(e) => setForce(e.target.checked)}
                 disabled={isPending}
               />
-              <div className="absolute h-2 w-2 rounded-full bg-cyan opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none shadow-[0_0_8px_cyan]" />
+              <div className="absolute w-2 h-2 rounded-sm bg-cyan opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none shadow-[0_0_8px_cyan]" />
             </div>
-            <span className="text-xs text-txt-soft group-hover:text-txt transition-colors font-medium">
+            <span className="text-[12px] text-txt-soft group-hover:text-txt transition-colors font-medium">
               Force Deep Index
             </span>
           </label>
@@ -84,78 +80,72 @@ export function IndexPanel() {
           <button
             type="submit"
             disabled={isPending || !url.trim()}
-            className="w-full bg-cyan hover:bg-cyan-light disabled:opacity-20 text-void font-bold py-4 rounded-xl text-sm transition-all shadow-lg shadow-cyan/10 flex items-center justify-center gap-3 active:scale-[0.97] group"
+            className="w-full bg-void border border-border-bright hover:border-cyan/50 disabled:opacity-20 text-txt font-bold py-3.5 rounded-xl text-[12px] tracking-[0.15em] uppercase transition-all flex items-center justify-center gap-3 active:scale-[0.98] mt-2 group"
           >
             {isPending ? (
-              <div className="w-5 h-5 border-3 border-void/30 border-t-void rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-txt-muted/30 border-t-cyan rounded-full animate-spin" />
             ) : (
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2.5"
-                className="w-4 h-4 group-hover:rotate-12 transition-transform"
+                className="w-4 h-4 text-txt-soft group-hover:text-cyan transition-colors"
               >
                 <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9-9a9 9 0 00-9 9" />
               </svg>
             )}
-            <span className="tracking-wide uppercase text-[12px]">
-              {indexedRepo ? "Sync Source" : "Start Indexing"}
-            </span>
+            <span>{indexedRepo ? "Sync Source" : "Start Indexing"}</span>
           </button>
         </form>
 
-        <div className="flex flex-col gap-4">
-          {error && (
-            <div className="p-4 rounded-xl bg-err-dim border border-err/20 text-err text-[13px] animate-fade-up leading-relaxed shadow-xl shadow-err/5">
-              <div className="font-bold mb-1 uppercase text-[10px] tracking-widest opacity-80">
-                Indexing Error
-              </div>
-              {error?.response?.data?.message ||
-                "Verify GitHub access and URL."}
-            </div>
-          )}
+        <div className="h-px bg-border/50 -mx-6" />
 
-          {indexedRepo && (
-            <div className="p-5 rounded-2xl bg-elevated border border-border border-l-[3px] border-l-cyan animate-fade-up shadow-xl group cursor-default">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-txt-muted font-bold mb-2.5 flex items-center justify-between">
-                <span>Active Context</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse" />
-              </p>
-              <p className="text-[13px] font-mono text-cyan truncate leading-none group-hover:text-cyan-light transition-colors">
-                {repoName}
-              </p>
+        {/* Error Feedback */}
+        {error && (
+          <div className="px-4 py-4 rounded-xl bg-err-dim border border-err/20 text-err text-[12px] leading-relaxed animate-fade-up">
+            <div className="font-bold mb-1 uppercase text-[10px] tracking-[0.2em] opacity-80">
+              Error
             </div>
-          )}
-        </div>
+            {error?.response?.data?.message || "Check GitHub URL."}
+          </div>
+        )}
+
+        {/* Active Context - Matches Image */}
+        {indexedRepo && (
+          <div className="px-5 py-5 bg-elevated/40 border border-border border-l-[3px] border-l-cyan rounded-xl animate-fade-up relative group">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-txt-muted font-bold mb-3 flex items-center justify-between">
+              <span>Active Context</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan animate-pulse-dot" />
+            </p>
+            <p className="text-[14px] font-mono text-cyan truncate font-semibold">
+              {repoName}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Emergency Reset */}
-      <div className="mt-auto pt-6 border-t border-border-dim/50">
+      {/* ── Footer ── */}
+      <div className="p-6 border-t border-border/50">
         <button
-          onClick={() => {
-            if (
-              window.confirm("Reset all session data? This cannot be undone.")
-            )
-              session.reset();
-          }}
-          className="w-full flex items-center justify-between p-4 rounded-2xl border border-border-dim hover:border-err/20 group transition-all hover:bg-err-dim/5 active:scale-[0.98]"
+          onClick={() => window.confirm("Reset session?") && session.reset()}
+          className="w-full flex items-center justify-between px-5 py-4 rounded-xl border border-border hover:border-err/30 hover:bg-err-dim transition-all group active:scale-[0.98]"
         >
           <div className="flex flex-col items-start">
-            <span className="text-[9px] font-bold text-txt-muted uppercase tracking-[0.2em] group-hover:text-err/60 transition-colors mb-0.5">
+            <span className="text-[10px] font-bold text-txt-muted uppercase tracking-[0.2em] mb-0.5">
               Emergency
             </span>
-            <span className="text-[11px] text-txt-soft font-medium group-hover:text-err transition-colors">
+            <span className="text-[12px] text-txt-soft group-hover:text-err transition-colors font-medium">
               Wipe Session
             </span>
           </div>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-overlay group-hover:bg-err-dim/20 transition-all">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-surface group-hover:bg-err-dim/30 transition-all border border-border">
             <svg
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className="w-4 h-4 text-txt-muted group-hover:text-err group-hover:rotate-12 transition-all"
+              className="w-4 h-4 text-txt-muted group-hover:text-err"
             >
               <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>

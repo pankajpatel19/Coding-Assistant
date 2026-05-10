@@ -2,6 +2,7 @@ import { createContext, useContext } from "react";
 import { useSession } from "../hooks/useSession";
 import { useIndexRepo } from "../hooks/useIndexRepo";
 import { useAskQuestion } from "../hooks/useAskQuestion";
+import { useHistory } from "../hooks/useHistory";
 import { ragApi } from "../api/ragApi";
 
 const RagContext = createContext(null);
@@ -27,6 +28,8 @@ export function RagProvider({ children }) {
     summary 
   } = useAskQuestion();
 
+  const { repos: history } = useHistory();
+
   const clearHistory = async () => {
     try {
       await ragApi.clearHistory();
@@ -49,7 +52,8 @@ export function RagProvider({ children }) {
       isPending: isIndexing, 
       isSuccess: isIndexed, 
       repo: indexedRepo, 
-      error: indexError 
+      error: indexError,
+      history 
     },
     chat: { 
       messages, 

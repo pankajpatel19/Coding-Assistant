@@ -30,4 +30,7 @@ export const ragApi = {
 
   clearHistory: () =>
     http.delete("/api/chat/clear-history").then((r) => r.data),
+
+  getHistory: () =>
+    http.get("/api/chat/history").then((r) => r.data),
 };

@@ -122,4 +122,21 @@ const clearTable = async () => {
   }
 };
 
-export { isIndexed, searchChunks, saveChunks, clearTable, getAllChunks };
+const getIndexedRepos = async () => {
+  try {
+    const db = await ConnectDB();
+    const tableNames = await db.tableNames();
+    if (!tableNames.includes(TABLE_NAME)) return [];
+
+    const table = await db.openTable(TABLE_NAME);
+    // Fetch all records but only keep unique repo URLs
+    const result = await table.search().limit(10000).execute();
+    const uniqueRepos = [...new Set(result.map((r) => r.repo).filter(Boolean))];
+    return uniqueRepos;
+  } catch (error) {
+    console.error("Error getting indexed repos:", error);
+    return [];
+  }
+};
+
+export { isIndexed, searchChunks, saveChunks, clearTable, getAllChunks, getIndexedRepos };

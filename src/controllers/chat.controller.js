@@ -10,6 +10,7 @@ import {
   searchChunks,
   clearTable,
   getAllChunks,
+  getIndexedRepos,
 } from "../services/vectordb.service.js";
 
 // Session-based storage: replaces global state for multi-user scalability.
@@ -244,4 +245,13 @@ const clearHistory = async (req, res) => {
   }
 };
 
-export { indexRepo, askedQuestion, clearHistory };
+const getHistory = async (req, res) => {
+  try {
+    const repos = await getIndexedRepos();
+    return res.status(200).json({ success: true, repos });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export { indexRepo, askedQuestion, clearHistory, getHistory };

@@ -101,6 +101,36 @@ export function IndexPanel() {
 
         <div className="h-px bg-border/50 -mx-6" />
 
+        {/* Recent Repositories */}
+        {indexing.history?.length > 0 && (
+          <div className="flex flex-col gap-4 animate-fade-up">
+            <span className="text-[10px] font-bold text-txt-muted uppercase tracking-[0.2em] ml-1">
+              Recent Repositories
+            </span>
+            <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-1">
+              {indexing.history
+                .filter((h) => h !== indexedRepo)
+                .map((historyRepo) => (
+                  <button
+                    key={historyRepo}
+                    onClick={() => {
+                      setUrl(historyRepo);
+                      onIndex({ repoUrl: historyRepo, force: false });
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-surface/30 hover:border-cyan/30 hover:bg-cyan/5 transition-all text-left group"
+                  >
+                    <div className="w-6 h-6 rounded-lg bg-border flex items-center justify-center text-[10px] text-txt-muted group-hover:bg-cyan/10 group-hover:text-cyan transition-colors">
+                      📁
+                    </div>
+                    <span className="text-[12px] text-txt-soft truncate font-mono">
+                      {historyRepo.replace("https://github.com/", "")}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
         {/* Error Feedback */}
         {error && (
           <div className="px-4 py-4 rounded-xl bg-err-dim border border-err/20 text-err text-[12px] leading-relaxed animate-fade-up">

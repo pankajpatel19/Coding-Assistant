@@ -5,7 +5,7 @@ import { ChatFeed } from "./components/ChatFeed/ChatFeed";
 import { InputBar } from "./components/InputBar/InputBar";
 
 export default function App() {
-  const { session, indexing, chat } = useRag();
+  const { indexing, chat } = useRag();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -36,23 +36,35 @@ export default function App() {
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 bg-surface border border-border rounded-lg text-txt-muted hover:text-cyan transition-all"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                className="w-4 h-4"
+              >
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
 
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
-                <div className={`w-2.5 h-2.5 rounded-full transition-colors duration-700 ${indexing.repo ? "bg-cyan" : "bg-border-bright"}`} />
-                {indexing.repo && <div className="absolute inset-0 bg-cyan rounded-full animate-ping opacity-25" />}
+                <div
+                  className={`w-2.5 h-2.5 rounded-full transition-colors duration-700 ${indexing.repo ? "bg-cyan" : "bg-border-bright"}`}
+                />
+                {indexing.repo && (
+                  <div className="absolute inset-0 bg-cyan rounded-full animate-ping opacity-25" />
+                )}
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold text-txt-muted uppercase tracking-[0.25em] leading-none mb-1">
                   {chat.summary ? "Conversation Memory" : "Core Session"}
                 </span>
-                <span className="text-[12px] font-mono text-txt-soft/80 tracking-widest truncate max-w-[240px]">
-                  {chat.summary || `ID_${session.id.slice(0, 16).toUpperCase()}`}
-                </span>
+                {chat.summary && (
+                  <span className="text-[12px] font-mono text-txt-soft/80 tracking-widest truncate max-w-[240px]">
+                    {chat.summary}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -64,10 +76,18 @@ export default function App() {
                 onClick={chat.clear}
                 className="group flex items-center gap-2.5 px-4 py-2 rounded-xl bg-err-dim border border-err/10 hover:border-err/30 transition-all"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-err/60 group-hover:text-err transition-colors">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="w-3.5 h-3.5 text-err/60 group-hover:text-err transition-colors"
+                >
                   <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                <span className="text-[10px] font-bold text-err/60 group-hover:text-err uppercase tracking-widest">Wipe Chat</span>
+                <span className="text-[10px] font-bold text-err/60 group-hover:text-err uppercase tracking-widest">
+                  Wipe Chat
+                </span>
               </button>
             )}
 
@@ -84,7 +104,6 @@ export default function App() {
               ))}
             </div>
           </div>
-
         </header>
 
         {/* Chat Feed */}

@@ -73,8 +73,11 @@ async function getRepoFiles(owner, repo) {
       "obj",
     ];
 
+    const maxFileSize = 120 * 1024;
+
     const files = data.tree.filter((file) => {
       if (file.type !== "blob") return false;
+      if (file.size && file.size > maxFileSize) return false;
       if (excludeFiles.some((ex) => file.path.endsWith(ex))) return false;
       if (excludeDirs.some((dir) => file.path.split("/").includes(dir)))
         return false;

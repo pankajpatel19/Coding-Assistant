@@ -239,6 +239,24 @@ const chunkFileByLanguage = (content, filePath, repo) => {
   }
 };
 
+const mapWithConcurrency = async (items, concurrency, mapper) => {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const currentIndex = nextIndex++;
+        results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+      }
+    },
+  );
+
+  await Promise.all(workers);
+  return results;
+};
+
 const buildChunk = async (owner, repo, getRepoFiles, getFileContent) => {
   try {
     const files = await getRepoFiles(owner, repo);
@@ -254,11 +272,12 @@ const buildChunk = async (owner, repo, getRepoFiles, getFileContent) => {
       repo: repoId,
     });
 
-    for (const file of files) {
+    const chunkGroups = await mapWithConcurrency(files, 8, async (file) => {
       const content = await getFileContent(owner, repo, file.path);
-      const chunks = chunkFileByLanguage(content, file.path, repoId);
-      allChunks.push(...chunks);
-    }
+      return chunkFileByLanguage(content, file.path, repoId);
+    });
+
+    allChunks.push(...chunkGroups.flat());
 
     return allChunks;
   } catch (error) {

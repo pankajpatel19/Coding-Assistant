@@ -43,7 +43,7 @@ const saveChunks = async (chunks) => {
   }
 };
 
-const searchChunks = async (embedding, repo = null, k = 5) => {
+const searchChunks = async (embedding, repo = null, k = 12) => {
   try {
     const db = await ConnectDB();
 
@@ -76,6 +76,27 @@ const searchChunks = async (embedding, repo = null, k = 5) => {
   }
 };
 
+const getAllChunks = async (repo) => {
+  try {
+    const db = await ConnectDB();
+    if (!table) {
+      const tableNames = await db.tableNames();
+      if (!tableNames.includes(TABLE_NAME)) return [];
+      table = await db.openTable(TABLE_NAME);
+    }
+    const result = await table.search().where(`repo = '${repo.replace(/'/g, "''")}'`).limit(5000).execute();
+    return result.map((r) => ({
+      filePath: r.filePath,
+      content: r.content,
+      language: r.language,
+      repo: r.repo,
+    }));
+  } catch (error) {
+    console.error("Error getting all chunks:", error);
+    return [];
+  }
+};
+
 const isIndexed = async (repoUrl) => {
   try {
     const db = await ConnectDB();
@@ -101,4 +122,4 @@ const clearTable = async () => {
   }
 };
 
-export { isIndexed, searchChunks, saveChunks, clearTable };
+export { isIndexed, searchChunks, saveChunks, clearTable, getAllChunks };

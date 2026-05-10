@@ -64,6 +64,7 @@ const retrieveSementicChunks = async (
 };
 
 const retrieveCode = async (question, chunks, topK = 5) => {
+  if (!chunks || !Array.isArray(chunks)) return [];
   const words = question
     .toLowerCase()
     .replace(/[^\w\s]/gi, "")

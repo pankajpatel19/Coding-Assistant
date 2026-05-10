@@ -5,7 +5,7 @@ const modelId = "amazon.titan-embed-text-v2:0";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function getEmbedding(text, retries = 3) {
+async function getEmbedding(text, retries = 5) {
   const payload = {
     inputText: text,
   };
@@ -22,10 +22,13 @@ async function getEmbedding(text, retries = 3) {
     const result = JSON.parse(Buffer.from(res.body).toString("utf-8"));
     return result.embedding;
   } catch (error) {
-    // Handle Throttling with exponential backoff
+    // Throttling handling with exponential backoff (1s, 2s, 4s, 8s, 16s)
     if (error.name === "ThrottlingException" && retries > 0) {
-      console.warn(`Throttled. Retrying in ${4 - retries}s...`);
-      await sleep(1000 * (4 - retries));
+      const waitTime = Math.pow(2, 5 - retries) * 1000;
+      console.warn(
+        `Throttled by Bedrock. Retrying in ${waitTime / 1000}s... (Retries left: ${retries})`,
+      );
+      await sleep(waitTime);
       return getEmbedding(text, retries - 1);
     }
     console.error("Bedrock Invoke Error:", error);
@@ -33,7 +36,7 @@ async function getEmbedding(text, retries = 3) {
   }
 }
 
-const getEmbeddings = async (chunks, batchSize = 10) => {
+const getEmbeddings = async (chunks, batchSize = 3) => {
   try {
     const validChunks = chunks.filter(
       (chunk) => chunk.content && chunk.content.trim().length > 0,
@@ -54,9 +57,9 @@ const getEmbeddings = async (chunks, batchSize = 10) => {
       const batchResults = await Promise.all(batchPromises);
       embeddings.push(...batchResults);
 
-      // Add a small delay between batches to stay under rate limits
+      // Higher delay between batches to stay safe under rate limits
       if (i + batchSize < validChunks.length) {
-        await sleep(200);
+        await sleep(500);
       }
     }
     return embeddings;

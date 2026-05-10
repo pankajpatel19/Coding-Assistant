@@ -9,6 +9,7 @@ import {
   saveChunks,
   searchChunks,
   clearTable,
+  getAllChunks,
 } from "../services/vectordb.service.js";
 
 // Session-based storage: replaces global state for multi-user scalability.
@@ -34,6 +35,7 @@ const getSession = (req) => {
 };
 
 const rerankChunks = (chunks, question) => {
+  if (!chunks || !Array.isArray(chunks)) return [];
   const stopWords = new Set([
     "the",
     "and",
@@ -98,10 +100,15 @@ const indexRepo = async (req, res) => {
 
     if (!force && alreadyIndexed) {
       state.cacheRepo = `${owner}/${repo}`;
+      // RESTORE: Load chunks from LanceDB back into memory if session was lost
+      if (!state.cacheChunks || state.cacheChunks.length === 0) {
+        console.log("Restoring session from LanceDB...");
+        state.cacheChunks = await getAllChunks(state.cacheRepo);
+      }
       return res.status(200).json({
         success: true,
         repo: repoUrl,
-        message: "Repo is already indexed Use force to index again",
+        message: "Session restored from index",
       });
     }
 
@@ -147,8 +154,16 @@ const askedQuestion = async (req, res) => {
       return res.status(400).json({ message: "Question is required" });
     }
 
-    if (!state.cacheRepo || state.cacheChunks?.length === 0) {
-      return res.status(400).json({ message: "No repo indexed" });
+    if (
+      !state.cacheRepo ||
+      !state.cacheChunks ||
+      state.cacheChunks.length === 0
+    ) {
+      return res
+        .status(400)
+        .json({
+          message: "No repo indexed or session expired. Please re-index.",
+        });
     }
 
     let relevent = [];

@@ -245,6 +245,15 @@ const buildChunk = async (owner, repo, getRepoFiles, getFileContent) => {
     const allChunks = [];
     const repoId = `${owner}/${repo}`;
 
+    // Create a special virtual chunk for the repository file structure
+    const fileTree = files.map((f) => f.path).join("\n");
+    allChunks.push({
+      filePath: "PROJECT_OVERVIEW.md",
+      content: `Repository File Structure for ${repoId}:\n${fileTree}`,
+      language: "markdown",
+      repo: repoId,
+    });
+
     for (const file of files) {
       const content = await getFileContent(owner, repo, file.path);
       const chunks = chunkFileByLanguage(content, file.path, repoId);

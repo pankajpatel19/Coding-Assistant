@@ -141,8 +141,9 @@ const askedQuestion = async (req, res) => {
   try {
     const { question, mode = "semantic" } = req.body;
     const { state } = getSession(req);
+    console.log(question);
 
-    if (!question) {
+    if (!question || !question.trim()) {
       return res.status(400).json({ message: "Question is required" });
     }
 
@@ -202,7 +203,6 @@ const askedQuestion = async (req, res) => {
       answer,
       summary: state.historySummary,
     });
-
   } catch (error) {
     console.error("Error during asking question:", error);
     return res.status(500).json({

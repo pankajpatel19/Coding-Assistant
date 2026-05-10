@@ -89,7 +89,7 @@ export function AiMessage({ answer, files, timestamp }) {
                   className="px-3 py-1.5 bg-overlay/50 border border-border/50 rounded-lg text-[12px] font-mono text-txt-soft hover:text-cyan hover:border-cyan/30 transition-all cursor-default shadow-sm"
                   title={file}
                 >
-                  {file.split("/").pop()}
+                  {file?.split("/").pop()}
                 </span>
               ))}
             </div>

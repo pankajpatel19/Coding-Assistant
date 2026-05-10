@@ -14,7 +14,16 @@ export const setSessionHeader = (id) => {
 export const ragApi = {
   // Endpoints match backend mounting at /api/chat
   indexRepo: ({ repoUrl, force = false }) =>
-    http.post("/api/chat/index", { repoUrl, force }).then((r) => r.data),
+    http
+      .post("/api/chat/index", { repoUrl, force })
+      .then((r) => {
+        console.log(r.data);
+        return r.data;
+      })
+      .catch((error) => {
+        console.log(error);
+        return error;
+      }),
 
   askQuestion: ({ question, mode = "semantic" }) =>
     http.post("/api/chat/ask", { question, mode }).then((r) => r.data),

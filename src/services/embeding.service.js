@@ -3,7 +3,9 @@ import { InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
 const modelId = "amazon.titan-embed-text-v2:0";
 
-async function getEmbedding(text) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function getEmbedding(text, retries = 3) {
   const payload = {
     inputText: text,
   };
@@ -14,11 +16,18 @@ async function getEmbedding(text) {
     contentType: "application/json",
     body: JSON.stringify(payload),
   });
+
   try {
     const res = await client.send(command);
     const result = JSON.parse(Buffer.from(res.body).toString("utf-8"));
     return result.embedding;
   } catch (error) {
+    // Handle Throttling with exponential backoff
+    if (error.name === "ThrottlingException" && retries > 0) {
+      console.warn(`Throttled. Retrying in ${4 - retries}s...`);
+      await sleep(1000 * (4 - retries));
+      return getEmbedding(text, retries - 1);
+    }
     console.error("Bedrock Invoke Error:", error);
     throw error;
   }
@@ -26,10 +35,14 @@ async function getEmbedding(text) {
 
 const getEmbeddings = async (chunks, batchSize = 10) => {
   try {
+    const validChunks = chunks.filter(
+      (chunk) => chunk.content && chunk.content.trim().length > 0,
+    );
     const embeddings = [];
-    // Process chunks in parallel batches to respect rate limits while improving speed
-    for (let i = 0; i < chunks.length; i += batchSize) {
-      const batch = chunks.slice(i, i + batchSize);
+
+    for (let i = 0; i < validChunks.length; i += batchSize) {
+      const batch = validChunks.slice(i, i + batchSize);
+
       const batchPromises = batch.map(async (chunk) => {
         const embedding = await getEmbedding(chunk.content);
         return {
@@ -37,13 +50,18 @@ const getEmbeddings = async (chunks, batchSize = 10) => {
           embedding,
         };
       });
-      
+
       const batchResults = await Promise.all(batchPromises);
       embeddings.push(...batchResults);
+
+      // Add a small delay between batches to stay under rate limits
+      if (i + batchSize < validChunks.length) {
+        await sleep(200);
+      }
     }
     return embeddings;
   } catch (error) {
-    console.error("Bedrock Invoke Error:", error);
+    console.error("Bedrock Embeddings Error:", error);
     throw error;
   }
 };

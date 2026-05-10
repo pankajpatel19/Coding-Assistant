@@ -8,6 +8,9 @@ export const PORT = process.env.PORT;
 export const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 export const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 export const PINECONE_INDEX_NAME = process.env.PINECONE_INDEX_NAME;
+export const PINECONE_CLOUD = process.env.PINECONE_CLOUD || "aws";
+export const PINECONE_REGION = process.env.PINECONE_REGION || "us-east-1";
+export const PINECONE_METRIC = process.env.PINECONE_METRIC || "cosine";
 
 export const checkEnv = () => {
   if (
@@ -16,8 +19,7 @@ export const checkEnv = () => {
     !AWS_ACCESS_KEY ||
     !AWS_SECRET_KEY ||
     !GITHUB_TOKEN ||
-    !PINECONE_API_KEY ||
-    !PINECONE_INDEX_NAME
+    !PINECONE_API_KEY
   ) {
     throw new Error("Missing environment variables");
   }

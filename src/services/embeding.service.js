@@ -1,78 +1,79 @@
-import { pipeline } from "@xenova/transformers";
+import { client } from "../config/aws.js";
+import { InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
-let extractor = null;
+const EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0";
 
-// Initialize the model (Singleton pattern)
-async function getExtractor() {
-  if (!extractor) {
-    console.log("Loading Local Embedding Model (all-MiniLM-L6-v2)...");
-    extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
-    console.log("Model Loaded Successfully.");
-  }
-  return extractor;
-}
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Generates a single embedding locally.
- */
 async function getEmbedding(text) {
   try {
-    const extract = await getExtractor();
-    const output = await extract(text, { pooling: "mean", normalize: true });
-    return Array.from(output.data);
+    if (!text || text.trim().length === 0) {
+      console.warn("Skipping empty text for embedding.");
+      return null;
+    }
+
+    const payload = {
+      inputText: text,
+      dimensions: 1024,
+      normalize: true,
+    };
+
+    const command = new InvokeModelCommand({
+      modelId: EMBEDDING_MODEL_ID,
+      contentType: "application/json",
+      accept: "application/json",
+      body: JSON.stringify(payload),
+    });
+
+    const response = await client.send(command);
+    const body = JSON.parse(Buffer.from(response.body).toString("utf-8"));
+    return body.embedding;
   } catch (error) {
-    console.error("Local Embedding Error:", error);
+    if (error.name === "ThrottlingException") {
+      console.warn("Throttled by Bedrock. Waiting 2 seconds...");
+      await sleep(2000);
+      return getEmbedding(text); // Simple retry
+    }
+    console.error("Bedrock v2 Embedding Error:", error.message);
     throw error;
   }
 }
 
 /**
- * Generates embeddings for multiple chunks at high speed.
- * No throttling or batch delays needed for local processing.
+ * Generate embeddings sequentially with a small delay to prevent Throttling
  */
-const getEmbeddings = async (chunks) => {
+async function getEmbeddings(chunks) {
   try {
     const validChunks = chunks.filter(
       (chunk) => chunk.content && chunk.content.trim().length > 0,
     );
 
-    console.log(`Starting Local Indexing for ${validChunks.length} chunks...`);
-    const startTime = Date.now();
-
+    console.log(
+      `Generating Bedrock v2 (1024 dims) embeddings for ${validChunks.length} chunks...`,
+    );
     const embeddings = [];
-    const extract = await getExtractor();
 
-    // Process in small groups for better memory management during high-speed extraction
-    const groupSize = 10;
-    for (let i = 0; i < validChunks.length; i += groupSize) {
-      const group = validChunks.slice(i, i + groupSize);
+    for (let i = 0; i < validChunks.length; i++) {
+      const chunk = validChunks[i];
+      const vector = await getEmbedding(chunk.content);
+      if (!vector) continue;
 
-      const groupPromises = group.map(async (chunk) => {
-        const output = await extract(chunk.content, {
-          pooling: "mean",
-          normalize: true,
-        });
-        return {
-          ...chunk,
-          embedding: Array.from(output.data),
-        };
-      });
+      embeddings.push({ ...chunk, embedding: vector });
 
-      const groupResults = await Promise.all(groupPromises);
-      embeddings.push(...groupResults);
-
-      if (i % 50 === 0 && i > 0) {
-        console.log(`Progress: ${i}/${validChunks.length} chunks indexed...`);
+      // Small progress log every 10 chunks
+      if ((i + 1) % 10 === 0 || i === validChunks.length - 1) {
+        console.log(`Progress: ${i + 1}/${validChunks.length} chunks...`);
       }
+
+      // Small delay between requests to stay under rate limits
+      await sleep(100);
     }
 
-    const endTime = Date.now();
-    console.log(`Indexing Complete! Took ${(endTime - startTime) / 1000}s.`);
     return embeddings;
   } catch (error) {
-    console.error("Local Batch Indexing Error:", error);
+    console.error("Batch Embedding Error:", error.message);
     throw error;
   }
-};
+}
 
 export { getEmbedding, getEmbeddings };

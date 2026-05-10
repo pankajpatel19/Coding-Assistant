@@ -1,11 +1,68 @@
-import { Pinecone } from "@pinecone-database/pinecone";
-import { PINECONE_INDEX_NAME, PINECONE_API_KEY } from "../utils/env.js";
+import { Pinecone, Errors } from "@pinecone-database/pinecone";
+import {
+  PINECONE_INDEX_NAME,
+  PINECONE_API_KEY,
+  PINECONE_CLOUD,
+  PINECONE_REGION,
+  PINECONE_METRIC,
+} from "../utils/env.js";
 
-const INDEX_NAME = PINECONE_INDEX_NAME || "code-assistant-384";
-const VECTOR_DIMENSION = 384;
+// Standardizing on 1024 dimensions for Titan v2
+const VECTOR_DIMENSION = 1024;
+const INDEX_NAME = PINECONE_INDEX_NAME || `code-assistant-${VECTOR_DIMENSION}`;
+const DUMMY_QUERY_VECTOR = [1, ...new Array(VECTOR_DIMENSION - 1).fill(0)];
 
 let pinecone = null;
 let index = null;
+
+const isNotFoundError = (error) =>
+  error instanceof Errors.PineconeNotFoundError ||
+  error?.name === "PineconeNotFoundError" ||
+  error?.message?.includes("HTTP status 404");
+
+const isValidDenseVector = (embedding) =>
+  Array.isArray(embedding) &&
+  embedding.length === VECTOR_DIMENSION &&
+  embedding.every((value) => Number.isFinite(value)) &&
+  embedding.some((value) => value !== 0);
+
+async function ensureIndex() {
+  try {
+    const description = await pinecone.describeIndex(INDEX_NAME);
+
+    if (description.dimension !== VECTOR_DIMENSION) {
+      throw new Error(
+        `Pinecone index "${INDEX_NAME}" has ${description.dimension} dimensions, but this app generates ${VECTOR_DIMENSION}-dimension Titan embeddings. Use a ${VECTOR_DIMENSION}-dimension index or update PINECONE_INDEX_NAME.`,
+      );
+    }
+
+    return description;
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      throw error;
+    }
+
+    console.log(
+      `Pinecone index "${INDEX_NAME}" was not found. Creating ${VECTOR_DIMENSION}-dimension serverless index in ${PINECONE_CLOUD}/${PINECONE_REGION}...`,
+    );
+
+    await pinecone.createIndex({
+      name: INDEX_NAME,
+      dimension: VECTOR_DIMENSION,
+      metric: PINECONE_METRIC,
+      spec: {
+        serverless: {
+          cloud: PINECONE_CLOUD,
+          region: PINECONE_REGION,
+        },
+      },
+      suppressConflicts: true,
+      waitUntilReady: true,
+    });
+
+    return pinecone.describeIndex(INDEX_NAME);
+  }
+}
 
 async function connectDB() {
   try {
@@ -13,8 +70,13 @@ async function connectDB() {
       pinecone = new Pinecone({
         apiKey: PINECONE_API_KEY || process.env.PINECONE_API_KEY,
       });
+    }
+
+    if (!index) {
+      await ensureIndex();
       index = pinecone.index(INDEX_NAME);
     }
+
     return index;
   } catch (error) {
     console.error("Error connecting to Pinecone:", error);
@@ -25,10 +87,9 @@ async function connectDB() {
 const saveChunks = async (chunks, repoUrl) => {
   try {
     if (!chunks || chunks.length === 0) return true;
-    const index = await connectDB();
 
     const records = chunks
-      .filter((c) => c.embedding && c.embedding.length === VECTOR_DIMENSION)
+      .filter((c) => isValidDenseVector(c.embedding))
       .map((chunk, idx) => ({
         id: `${repoUrl}-${idx}-${Date.now()}`,
         values: chunk.embedding,
@@ -40,33 +101,41 @@ const saveChunks = async (chunks, repoUrl) => {
         },
       }));
 
-    if (records.length === 0) {
-      throw new Error(
-        `No ${VECTOR_DIMENSION}-dimension embeddings were available to save.`,
+    const skippedCount = chunks.length - records.length;
+    if (skippedCount > 0) {
+      console.warn(
+        `Skipped ${skippedCount} chunks with empty, invalid, or all-zero embeddings.`,
       );
     }
 
-    // Pinecone upsert limit handle karne ke liye batching
+    if (records.length === 0) {
+      throw new Error(
+        `No valid non-zero ${VECTOR_DIMENSION}-dimension embeddings available to save.`,
+      );
+    }
+
+    const index = await connectDB();
+
+    console.log(
+      `Upserting ${records.length} records to Pinecone (1024 dims)...`,
+    );
     const batchSize = 100;
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
       await index.upsert({ records: batch });
     }
-
-    console.log(
-      `✅ ${records.length} Chunks saved successfully for ${repoUrl}`,
-    );
+    console.log(`Success for ${repoUrl}`);
   } catch (error) {
     console.error("Error saving chunks:", error.message);
     throw error;
   }
 };
 
-const searchChunks = async (repoUrl, embedding, k = 12) => {
+const searchChunks = async (repoUrl, embedding, k = 15) => {
   try {
     if (!Array.isArray(embedding) || embedding.length !== VECTOR_DIMENSION) {
       throw new Error(
-        `Search vector dimension must be ${VECTOR_DIMENSION}, received ${embedding?.length || 0}.`,
+        `Dimension mismatch: expected ${VECTOR_DIMENSION}, got ${embedding?.length}.`,
       );
     }
 
@@ -95,7 +164,7 @@ const getAllChunks = async (repoUrl) => {
   try {
     const index = await connectDB();
     const result = await index.query({
-      vector: new Array(VECTOR_DIMENSION).fill(0),
+      vector: DUMMY_QUERY_VECTOR,
       topK: 1000,
       includeMetadata: true,
       filter: { repo: { $eq: repoUrl } },
@@ -117,7 +186,7 @@ const isIndexed = async (repoUrl) => {
   try {
     const index = await connectDB();
     const result = await index.query({
-      vector: new Array(VECTOR_DIMENSION).fill(0),
+      vector: DUMMY_QUERY_VECTOR,
       topK: 1,
       filter: { repo: { $eq: repoUrl } },
     });
@@ -131,16 +200,13 @@ const clearTable = async (repoUrl) => {
   try {
     const index = await connectDB();
     await index.deleteMany({ filter: { repo: { $eq: repoUrl } } });
-    console.log("Index cleared for repo:", repoUrl);
   } catch (error) {
     console.error("Error clearing index:", error.message);
     throw error;
   }
 };
 
-const getIndexedRepos = async () => {
-  return []; // Simplified for now
-};
+const getIndexedRepos = async () => [];
 
 export {
   isIndexed,

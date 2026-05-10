@@ -1,12 +1,16 @@
 import { useState } from "react";
+import { useRag } from "../../context/RagContext";
 
-export function IndexPanel({
-  onIndex,
-  isPending,
-  isSuccess,
-  indexedRepo,
-  error,
-}) {
+export function IndexPanel() {
+  const { indexing } = useRag();
+  const {
+    run: onIndex,
+    isPending,
+    isSuccess,
+    repo: indexedRepo,
+    error,
+  } = indexing;
+
   const [url, setUrl] = useState("");
   const [force, setForce] = useState(false);
 
@@ -21,7 +25,7 @@ export function IndexPanel({
     : null;
 
   return (
-    <div className="flex flex-col gap-6 p-6 border-r border-border h-full bg-base overflow-y-auto w-80">
+    <div className="flex flex-col gap-6 p-6 border-r border-border h-full bg-base overflow-y-auto w-80 flex-shrink-0">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-cyan-dim border border-cyan-border text-cyan shadow-[0_0_20px_rgba(0,212,170,0.15)]">
           <span className="text-xl">⬡</span>
@@ -44,7 +48,7 @@ export function IndexPanel({
           <input
             type="text"
             placeholder="owner/repo"
-            className="w-full bg-overlay border border-border text-txt rounded-sm px-3 py-2 text-sm font-mono focus:border-cyan focus:ring-1 focus:ring-cyan outline-none transition-all placeholder:text-txt-muted"
+            className="w-full bg-overlay border border-border text-txt rounded-sm px-3 py-2 text-sm font-mono focus:border-cyan outline-none transition-all placeholder:text-txt-muted"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             disabled={isPending}
@@ -67,11 +71,11 @@ export function IndexPanel({
         <button
           type="submit"
           disabled={isPending || !url.trim()}
-          className="w-full bg-cyan hover:bg-cyan-light disabled:opacity-40 text-void font-bold py-2 rounded-sm text-sm transition-all shadow-lg shadow-cyan/10 flex items-center justify-center gap-2"
+          className="w-full bg-cyan hover:bg-cyan-light disabled:opacity-40 text-void font-bold py-2 rounded-sm text-sm transition-all flex items-center justify-center gap-2"
         >
-          {isPending ? (
+          {isPending && (
             <div className="w-4 h-4 border-2 border-void/20 border-t-void rounded-full animate-spin-sm" />
-          ) : null}
+          )}
           {indexedRepo ? "Sync Repository" : "Index Repository"}
         </button>
       </form>
@@ -83,14 +87,12 @@ export function IndexPanel({
             {error?.response?.data?.message || "Index failed"}
           </div>
         )}
-
         {isSuccess && !error && (
           <div className="p-3 rounded-sm bg-ok-dim border border-ok/20 text-ok text-xs flex items-center gap-2 animate-fade-up">
             <div className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse-dot" />
             Index Complete
           </div>
         )}
-
         {indexedRepo && (
           <div className="p-3 rounded-sm bg-elevated border border-border border-l-2 border-l-cyan animate-fade-up">
             <p className="text-[10px] uppercase tracking-widest text-txt-muted font-bold mb-1">

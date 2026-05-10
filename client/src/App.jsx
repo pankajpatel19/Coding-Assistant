@@ -18,7 +18,6 @@ export default function App() {
         />
       )}
 
-      {/* Sidebar Section */}
       <aside
         className={`
         fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
@@ -28,7 +27,6 @@ export default function App() {
         <IndexPanel />
       </aside>
 
-      {/* Main Chat Section */}
       <main className="flex-1 flex flex-col min-w-0 bg-base relative">
         {/* Header Bar */}
         <header className="h-16 border-b border-border flex items-center justify-between px-4 lg:px-8 bg-base/40 backdrop-blur-xl z-20">
@@ -52,18 +50,27 @@ export default function App() {
               <div
                 className={`w-2.5 h-2.5 rounded-full ${indexing.repo ? "bg-cyan animate-pulse-dot shadow-[0_0_8px_rgba(0,212,170,0.4)]" : "bg-txt-muted"}`}
               />
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <span className="text-[10px] font-mono text-txt-soft uppercase tracking-widest leading-none mb-1">
-                  Session ID
+                  {chat.summary ? "Conversation Memory" : "Session ID"}
                 </span>
-                <span className="text-[11px] font-bold text-txt/80 font-mono tracking-tight">
-                  {session.id.slice(0, 12)}
+                <span className="text-[11px] font-bold text-txt/80 font-mono tracking-tight truncate max-w-[200px]">
+                  {chat.summary || session.id.slice(0, 12)}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+            {chat.messages.length > 0 && (
+              <button
+                onClick={chat.clear}
+                className="text-[10px] font-bold text-err/60 hover:text-err uppercase tracking-widest transition-colors px-3 py-1.5 border border-err/10 hover:border-err/30 rounded-lg bg-err-dim/10"
+              >
+                Clear History
+              </button>
+            )}
+
             <div className="hidden sm:flex bg-overlay border border-border rounded-xl p-1 shadow-inner">
               {["semantic", "keyword"].map((m) => (
                 <button

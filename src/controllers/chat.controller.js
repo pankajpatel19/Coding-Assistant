@@ -200,7 +200,9 @@ const askedQuestion = async (req, res) => {
       success: true,
       message: "Question answered successfully",
       answer,
+      summary: state.historySummary,
     });
+
   } catch (error) {
     console.error("Error during asking question:", error);
     return res.status(500).json({

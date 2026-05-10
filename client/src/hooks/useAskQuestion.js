@@ -2,12 +2,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { ragApi } from "../api/ragApi";
 
-/**
- * Manages chat history and the ask-question mutation.
- */
 export function useAskQuestion() {
   const [messages, setMessages] = useState([]);
   const [mode, setMode] = useState("semantic");
+  const [summary, setSummary] = useState(null);
 
   const append = useCallback((msg) => {
     setMessages((prev) => [
@@ -23,6 +21,7 @@ export function useAskQuestion() {
     },
     onSuccess: (data) => {
       const raw = data.answer;
+      setSummary(data.summary); // Store history summary
       append({
         role: "assistant",
         answer: typeof raw === "object" ? raw.answer : raw,
@@ -50,7 +49,10 @@ export function useAskQuestion() {
     [mutation, mode],
   );
 
-  const clearLocalHistory = useCallback(() => setMessages([]), []);
+  const clearLocalHistory = useCallback(() => {
+    setMessages([]);
+    setSummary(null);
+  }, []);
 
   return {
     messages,
@@ -59,5 +61,6 @@ export function useAskQuestion() {
     ask,
     isAsking: mutation.isPending,
     clearLocalHistory,
+    summary,
   };
 }

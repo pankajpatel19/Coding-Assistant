@@ -2,39 +2,64 @@ import { createContext, useContext } from "react";
 import { useSession } from "../hooks/useSession";
 import { useIndexRepo } from "../hooks/useIndexRepo";
 import { useAskQuestion } from "../hooks/useAskQuestion";
+import { ragApi } from "../api/ragApi";
 
 const RagContext = createContext(null);
 
 export function RagProvider({ children }) {
-  const { sessionId, reset: resetSession } = useSession();
-  const {
-    indexRepo,
-    isPending: isIndexing,
-    isSuccess: isIndexed,
-    indexedRepo,
+  const { sessionId, reset: resetSessionId } = useSession();
+  const { 
+    indexRepo, 
+    isPending: isIndexing, 
+    isSuccess: isIndexed, 
+    indexedRepo, 
     error: indexError,
+    setIndexedRepo
   } = useIndexRepo();
+  
+  const { 
+    messages, 
+    ask, 
+    isAsking, 
+    mode, 
+    setMode, 
+    clearLocalHistory,
+    summary 
+  } = useAskQuestion();
 
-  const { messages, ask, isAsking, mode, setMode, clearLocalHistory } =
-    useAskQuestion();
+  const clearHistory = async () => {
+    try {
+      await ragApi.clearHistory();
+      clearLocalHistory();
+    } catch (err) {
+      console.error("Failed to clear history", err);
+    }
+  };
+
+  const fullReset = () => {
+    resetSessionId();
+    clearLocalHistory();
+    setIndexedRepo(null);
+  };
 
   const value = {
-    session: { id: sessionId, reset: resetSession },
-    indexing: {
-      run: indexRepo,
-      isPending: isIndexing,
-      isSuccess: isIndexed,
-      repo: indexedRepo,
-      error: indexError,
+    session: { id: sessionId, reset: fullReset },
+    indexing: { 
+      run: indexRepo, 
+      isPending: isIndexing, 
+      isSuccess: isIndexed, 
+      repo: indexedRepo, 
+      error: indexError 
     },
-    chat: {
-      messages,
-      ask,
-      isAsking,
-      mode,
-      setMode,
-      clear: clearLocalHistory,
-    },
+    chat: { 
+      messages, 
+      ask, 
+      isAsking, 
+      mode, 
+      setMode, 
+      clear: clearHistory,
+      summary
+    }
   };
 
   return <RagContext.Provider value={value}>{children}</RagContext.Provider>;

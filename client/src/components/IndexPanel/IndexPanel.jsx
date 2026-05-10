@@ -34,10 +34,10 @@ export function IndexPanel() {
           </div>
           <div>
             <h1 className="text-[15px] font-bold text-txt tracking-tight leading-tight">
-              Code RAG
+              {import.meta.env.VITE_APP_NAME || "Code RAG"}
             </h1>
             <p className="text-[10px] font-mono text-txt-soft tracking-[0.2em] uppercase mt-0.5 opacity-60">
-              Terminal Noir v1.0
+              {import.meta.env.VITE_APP_VERSION || "Terminal Noir v1.0"}
             </p>
           </div>
         </div>

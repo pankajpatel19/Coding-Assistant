@@ -13,7 +13,7 @@ export function InputBar() {
   };
 
   return (
-    <div className="px-6 pb-6 pt-3 bg-[#080c10] z-20 relative flex-shrink-0">
+    <div className="px-6 pb-6 pt-3 bg-base z-20 relative flex-shrink-0">
       <div className="max-w-4xl mx-auto flex flex-col gap-2">
         {/* Textarea + Send */}
         <form onSubmit={handleSend} className="flex items-end gap-2.5">
@@ -29,15 +29,18 @@ export function InputBar() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) handleSend(e);
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e);
+                }
               }}
-              className="w-full bg-[#0e141c] border border-[#1e2b3a] text-[#c8d4e0] rounded-xl px-4 py-3.5 pr-14 text-[13px] font-mono tracking-[0.02em] focus:border-cyan/25 focus:ring-[3px] focus:ring-cyan/5 outline-none transition-all resize-none disabled:opacity-20 placeholder:text-[#2a3a4a] leading-relaxed"
+              className="w-full bg-surface border border-border text-txt rounded-xl px-5 py-4 pr-14 text-[14px] font-mono tracking-tight focus:border-cyan/40 focus:ring-4 focus:ring-cyan/5 outline-none transition-all resize-none shadow-sm disabled:opacity-20 placeholder:text-txt-muted/50 leading-relaxed"
             />
 
             {/* Status dot */}
             <div className="absolute right-12 bottom-4 flex items-center">
               <span
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${chat.isAsking ? "bg-cyan animate-pulse" : "bg-[#1e2b3a]"}`}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${chat.isAsking ? "bg-cyan animate-pulse" : "bg-border"}`}
               />
             </div>
 

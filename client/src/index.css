@@ -4,38 +4,60 @@
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
 
-  /* Industry Standard Noir Palette (from image) */
-  --color-void:     #05070a;
-  --color-base:     #080c10;
-  --color-surface:  #0b0f16;
-  --color-elevated: #0e141c;
-  --color-overlay:  #121a24;
-
-  /* Borders */
-  --color-border:        #161d28;
-  --color-border-dim:    #111821;
-  --color-border-bright: #1e2b3a;
-
-  /* Brand Colors */
-  --color-cyan:        #00d4aa;
-  --color-cyan-dim:    #00d4aa15;
-  --color-cyan-border: #00d4aa30;
-  --color-cyan-light:  #00f0c0;
-
-  /* Text */
-  --color-txt:         #c8d4e0;
-  --color-txt-soft:    #8b9ab0;
-  --color-txt-muted:   #4a5568;
-
-  /* System */
-  --color-err:     #f87171;
-  --color-err-dim: #f8717110;
+  /* Theme-aware semantic colors */
+  --color-base:     var(--base);
+  --color-surface:  var(--surface);
+  --color-void:     var(--void);
+  --color-elevated: var(--elevated);
+  --color-border:   var(--border);
+  --color-border-bright: var(--border-bright);
+  --color-txt:      var(--txt);
+  --color-txt-soft: var(--txt-soft);
+  --color-txt-muted: var(--txt-muted);
+  --color-cyan:     var(--brand);
+  --color-cyan-dim: var(--brand-dim);
+  --color-err:      var(--error);
+  --color-err-dim:  var(--error-dim);
 
   @keyframes pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.9); }
+    50% { opacity: 0.5; transform: scale(0.9); }
   }
   --animate-pulse-dot: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+:root {
+  /* LIGHT MODE PALETTE */
+  --base: #ffffff;
+  --surface: #f8fafc;
+  --void: #f1f5f9;
+  --elevated: #ffffff;
+  --border: #e2e8f0;
+  --border-bright: #cbd5e1;
+  --txt: #0f172a;
+  --txt-soft: #475569;
+  --txt-muted: #94a3b8;
+  --brand: #0d9488;
+  --brand-dim: #0d948810;
+  --error: #dc2626;
+  --error-dim: #fee2e2;
+}
+
+.dark {
+  /* DARK MODE PALETTE */
+  --base: #080c10;
+  --surface: #0b0f16;
+  --void: #05070a;
+  --elevated: #0e141c;
+  --border: #161d28;
+  --border-bright: #1e2b3a;
+  --txt: #c8d4e0;
+  --txt-soft: #8b9ab0;
+  --txt-muted: #4a5568;
+  --brand: #00d4aa;
+  --brand-dim: #00d4aa15;
+  --error: #f87171;
+  --error-dim: #f8717110;
 }
 
 @layer base {
@@ -45,27 +67,14 @@
   }
   
   body {
-    @apply bg-void text-txt antialiased selection:bg-cyan/20;
+    @apply bg-base text-txt antialiased selection:bg-cyan/10 transition-colors duration-300;
     font-feature-settings: "cv02", "cv03", "cv04", "ss01";
   }
 
-  /* Custom Scrollbar for Noir aesthetic */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-border-bright);
+    background: var(--color-border);
     border-radius: 10px;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-txt-muted);
-  }
-}
-
-.glass-panel {
-  @apply bg-base/80 backdrop-blur-xl border border-border-bright/50;
 }

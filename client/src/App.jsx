@@ -4,11 +4,18 @@ import { useTheme } from "./context/ThemeContext";
 import { IndexPanel } from "./components/IndexPanel/IndexPanel";
 import { ChatFeed } from "./components/ChatFeed/ChatFeed";
 import { InputBar } from "./components/InputBar/InputBar";
+import Maintenance from "./components/Maintenance";
+
+const IS_MAINTENANCE = true; // Emergency maintenance flag
 
 export default function App() {
   const { indexing, chat } = useRag();
   const { isDark, toggleTheme } = useTheme();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  if (IS_MAINTENANCE) {
+    return <Maintenance />;
+  }
 
   return (
     <div className="flex h-screen w-screen bg-base text-txt overflow-hidden font-mono selection:bg-cyan/10">

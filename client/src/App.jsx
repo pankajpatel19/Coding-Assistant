@@ -4,6 +4,7 @@ import { useTheme } from "./context/ThemeContext";
 import { IndexPanel } from "./components/IndexPanel/IndexPanel";
 import { ChatFeed } from "./components/ChatFeed/ChatFeed";
 import { InputBar } from "./components/InputBar/InputBar";
+import { Toaster } from "react-hot-toast";
 import Maintenance from "./components/Maintenance";
 
 const IS_MAINTENANCE = true; // Emergency maintenance flag
@@ -151,6 +152,33 @@ export default function App() {
         {/* Input */}
         <InputBar />
       </main>
+
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "#0e141c",
+            color: "#6a7f94",
+            border: "1px solid #1e2b3a",
+            fontSize: "12px",
+            fontFamily: "monospace",
+            borderRadius: "12px",
+            padding: "12px 16px",
+          },
+          success: {
+            iconTheme: {
+              primary: "#00f0c0",
+              secondary: "#04201a",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ff4d4d",
+              secondary: "#220000",
+            },
+          },
+        }}
+      />
     </div>
   );
 }

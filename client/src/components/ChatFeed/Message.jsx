@@ -3,6 +3,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark, prism } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useState } from "react";
 import { useTheme } from "../../context/ThemeContext";
+import { toast } from "react-hot-toast";
 
 const CodeBlock = ({ language, value }) => {
   const [copied, setCopied] = useState(false);
@@ -11,6 +12,7 @@ const CodeBlock = ({ language, value }) => {
   const handleCopy = () => {
     navigator.clipboard.writeText(value);
     setCopied(true);
+    toast.success("Code copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   };
 

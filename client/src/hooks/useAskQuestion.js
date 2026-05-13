@@ -1,11 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { ragApi } from "../api/ragApi";
+import { toast } from "react-hot-toast";
 
 export function useAskQuestion() {
   const [messages, setMessages] = useState([]);
   const [mode, setMode] = useState("semantic");
   const [summary, setSummary] = useState(null);
+  const [creditsRemaining, setCreditsRemaining] = useState(3);
 
   const append = useCallback((msg) => {
     setMessages((prev) => [
@@ -22,6 +24,9 @@ export function useAskQuestion() {
     onSuccess: (data) => {
       const raw = data.answer;
       setSummary(data.summary); // Store history summary
+      if (typeof data.creditsRemaining !== 'undefined') {
+        setCreditsRemaining(data.creditsRemaining);
+      }
       append({
         role: "assistant",
         answer: typeof raw === "object" ? raw.answer : raw,
@@ -30,14 +35,21 @@ export function useAskQuestion() {
       });
     },
     onError: (error) => {
+      const errorMsg = error?.response?.data?.message ||
+          error?.message ||
+          "Something went wrong";
+          
       append({
         role: "error",
-        text:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Something went wrong",
+        text: errorMsg,
         timestamp: Date.now(),
       });
+      
+      toast.error(errorMsg);
+      if (error?.response?.data?.creditsRemaining === 0) {
+        setCreditsRemaining(0);
+        toast.error("Credits exhausted! Try again later.");
+      }
     },
   });
 
@@ -62,5 +74,6 @@ export function useAskQuestion() {
     isAsking: mutation.isPending,
     clearLocalHistory,
     summary,
+    creditsRemaining,
   };
 }

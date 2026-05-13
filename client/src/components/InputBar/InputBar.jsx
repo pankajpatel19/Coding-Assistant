@@ -102,6 +102,22 @@ export function InputBar() {
               </kbd>
               <span>newline</span>
             </span>
+            <span className="w-1 h-1 rounded-full bg-[#1e2b3a]" />
+            <div className="flex items-center gap-2">
+              <div className="flex gap-0.5">
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-1.5 h-1.5 rounded-full border border-border-bright/20 ${i < chat.creditsRemaining ? "bg-cyan" : "bg-void"}`}
+                  />
+                ))}
+              </div>
+              <span
+                className={`text-[9px] font-bold ${chat.creditsRemaining === 0 ? "text-err" : "text-txt-muted"}`}
+              >
+                {chat.creditsRemaining} Credits
+              </span>
+            </div>
           </div>
 
           {/* Mobile mode switch */}

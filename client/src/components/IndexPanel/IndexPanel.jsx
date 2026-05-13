@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRag } from "../../context/RagContext";
+import { toast } from "react-hot-toast";
 
 export function IndexPanel() {
   const { indexing, session } = useRag();
@@ -116,6 +117,9 @@ export function IndexPanel() {
                     onClick={() => {
                       setUrl(historyRepo);
                       onIndex({ repoUrl: historyRepo, force: false });
+                      toast.success(
+                        `Switching to ${historyRepo.split("/").pop()}`,
+                      );
                     }}
                     className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-surface/30 hover:border-cyan/30 hover:bg-cyan/5 transition-all text-left group"
                   >

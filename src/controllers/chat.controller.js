@@ -16,6 +16,7 @@ import {
 // Session-based storage: replaces global state for multi-user scalability.
 // For production, replace this Map with Redis or a database-backed store.
 const sessions = new Map();
+const INITIAL_CREDITS = 3;
 
 const getSession = (req) => {
   const sessionId =
@@ -30,6 +31,7 @@ const getSession = (req) => {
       conversationHistory: [],
       historySummary: null, // rolling summary of older turns
       embeddingChunks: [],
+      creditsRemaining: INITIAL_CREDITS,
     });
   }
   return { sessionId, state: sessions.get(sessionId) };
@@ -151,6 +153,14 @@ const askedQuestion = async (req, res) => {
     const { state } = getSession(req);
     console.log(question);
 
+    if (state.creditsRemaining <= 0) {
+      return res.status(403).json({
+        success: false,
+        message: "No credits left. You have used your 3 free questions.",
+        creditsRemaining: 0,
+      });
+    }
+
     if (!question || !question.trim()) {
       return res.status(400).json({ message: "Question is required" });
     }
@@ -203,6 +213,8 @@ const askedQuestion = async (req, res) => {
 
     const answer = await invokeBedrock(historyToSend);
 
+    state.creditsRemaining -= 1;
+
     state.conversationHistory.push({ role: "user", question, context });
     state.conversationHistory.push({ role: "assistant", answer });
 
@@ -218,6 +230,7 @@ const askedQuestion = async (req, res) => {
       message: "Question answered successfully",
       answer,
       summary: state.historySummary,
+      creditsRemaining: state.creditsRemaining,
     });
   } catch (error) {
     console.error("Error during asking question:", error);

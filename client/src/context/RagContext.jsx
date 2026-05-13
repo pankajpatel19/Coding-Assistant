@@ -4,6 +4,7 @@ import { useIndexRepo } from "../hooks/useIndexRepo";
 import { useAskQuestion } from "../hooks/useAskQuestion";
 import { useHistory } from "../hooks/useHistory";
 import { ragApi } from "../api/ragApi";
+import { toast } from "react-hot-toast";
 
 const RagContext = createContext(null);
 
@@ -11,23 +12,24 @@ export function RagProvider({ children }) {
   const { sessionId, reset: resetSessionId } = useSession();
   const [draftQuestion, setDraftQuestion] = useState("");
   const [draftSelectionVersion, setDraftSelectionVersion] = useState(0);
-  const { 
-    indexRepo, 
-    isPending: isIndexing, 
-    isSuccess: isIndexed, 
-    indexedRepo, 
+  const {
+    indexRepo,
+    isPending: isIndexing,
+    isSuccess: isIndexed,
+    indexedRepo,
     error: indexError,
-    setIndexedRepo
+    setIndexedRepo,
   } = useIndexRepo();
-  
-  const { 
-    messages, 
-    ask, 
-    isAsking, 
-    mode, 
-    setMode, 
+
+  const {
+    messages,
+    ask,
+    isAsking,
+    mode,
+    setMode,
     clearLocalHistory,
-    summary 
+    summary,
+    creditsRemaining,
   } = useAskQuestion();
 
   const { repos: history } = useHistory();
@@ -36,8 +38,10 @@ export function RagProvider({ children }) {
     try {
       await ragApi.clearHistory();
       clearLocalHistory();
+      toast.success("Chat history cleared.");
     } catch (err) {
       console.error("Failed to clear history", err);
+      toast.error("Failed to clear history.");
     }
   };
 
@@ -46,6 +50,7 @@ export function RagProvider({ children }) {
     clearLocalHistory();
     setDraftQuestion("");
     setIndexedRepo(null);
+    toast.success("Session reset complete.");
   };
 
   const selectDraftQuestion = (question) => {
@@ -55,27 +60,28 @@ export function RagProvider({ children }) {
 
   const value = {
     session: { id: sessionId, reset: fullReset },
-    indexing: { 
-      run: indexRepo, 
-      isPending: isIndexing, 
-      isSuccess: isIndexed, 
-      repo: indexedRepo, 
+    indexing: {
+      run: indexRepo,
+      isPending: isIndexing,
+      isSuccess: isIndexed,
+      repo: indexedRepo,
       error: indexError,
-      history 
+      history,
     },
-    chat: { 
-      messages, 
-      ask, 
-      isAsking, 
-      mode, 
-      setMode, 
+    chat: {
+      messages,
+      ask,
+      isAsking,
+      mode,
+      setMode,
       draftQuestion,
       setDraftQuestion,
       draftSelectionVersion,
       selectDraftQuestion,
       clear: clearHistory,
-      summary
-    }
+      summary,
+      creditsRemaining,
+    },
   };
 
   return <RagContext.Provider value={value}>{children}</RagContext.Provider>;

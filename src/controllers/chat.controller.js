@@ -96,6 +96,13 @@ const indexRepo = async (req, res) => {
     if (!repoUrl) {
       return res.status(400).json({ message: "Repo url is required" });
     }
+    
+    // Strict validation for GitHub URLs to prevent SSRF/Injection
+    const githubUrlRegex = /^https?:\/\/github\.com\/[\w.-]+\/[\w.-]+(\.git)?\/?$/i;
+    if (!githubUrlRegex.test(repoUrl)) {
+      return res.status(400).json({ message: "Invalid GitHub repository URL format" });
+    }
+    
     const { owner, repo } = parseRepoUrl(repoUrl);
     const { state } = getSession(req);
 
@@ -161,8 +168,17 @@ const askedQuestion = async (req, res) => {
       });
     }
 
-    if (!question || !question.trim()) {
-      return res.status(400).json({ message: "Question is required" });
+    if (!question || typeof question !== "string" || !question.trim()) {
+      return res.status(400).json({ message: "Question is required and must be a string" });
+    }
+
+    const trimmedQuestion = question.trim();
+    if (trimmedQuestion.length < 3 || trimmedQuestion.length > 1000) {
+      return res.status(400).json({ message: "Question must be between 3 and 1000 characters" });
+    }
+
+    if (mode !== "semantic" && mode !== "keyword") {
+      return res.status(400).json({ message: "Invalid mode specified" });
     }
 
     if (

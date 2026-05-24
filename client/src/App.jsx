@@ -7,7 +7,7 @@ import { InputBar } from "./components/InputBar/InputBar";
 import { Toaster } from "react-hot-toast";
 import Maintenance from "./components/Maintenance";
 
-const IS_MAINTENANCE = true; // Emergency maintenance flag
+const IS_MAINTENANCE = false; // Emergency maintenance flag
 
 export default function App() {
   const { indexing, chat } = useRag();
@@ -30,7 +30,7 @@ export default function App() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] lg:relative lg:translate-x-0
+        className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-500 ease-in-out lg:relative lg:translate-x-0
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         <IndexPanel />
